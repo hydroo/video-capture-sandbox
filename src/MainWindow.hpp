@@ -23,6 +23,10 @@ public:
 
     virtual QSize sizeHint() const;
 
+protected:
+
+    virtual void closeEvent(QCloseEvent *event);
+
 protected slots:
 
     void startStopButtonClicked(bool checked);

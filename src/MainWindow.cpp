@@ -47,6 +47,12 @@ QSize MainWindow::sizeHint() const
 }
 
 
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    (void) event;
+}
+
+
 void MainWindow::startStopButtonClicked(bool checked)
 {
     (void) checked;
