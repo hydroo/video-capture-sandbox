@@ -10,7 +10,9 @@ using std::cerr;
 using std::endl;
 
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
+MainWindow::MainWindow(QWidget *parent, Camera& camera) :
+        QMainWindow(parent),
+        m_camera(camera)
 {
     m_mainLayout = new QHBoxLayout();
     m_buttonLayout = new QVBoxLayout();

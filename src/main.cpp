@@ -6,6 +6,7 @@
 #include <string>
 #include <thread>
 #include <QApplication>
+#include "Camera.hpp"
 #include "MainWindow.hpp"
 
 using std::bind;
@@ -37,16 +38,27 @@ int main(int argc, char **args)
     /* evaluate arguments start */
     /* evaluate arguments end */
 
+    Camera camera;
+
+    camera.setFileName("/dev/video0");
+    camera.setCaptureSize(640, 480);
+    camera.init();
+
 
     thread t(bind(ReadThread2, 2/* test*/));
     t.join();
 
 
 
-    MainWindow mainWindow(0);
-
+    MainWindow mainWindow(0, camera);
     mainWindow.show();
 
-    return app.exec();
+    int ret = app.exec();
+
+
+    camera.finish();
+
+
+    return ret;
 }
 

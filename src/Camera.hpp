@@ -65,7 +65,7 @@ private:
 
     unsigned char *m_bufferOne;
     unsigned char *m_bufferTwo;
-    size_t m_bufferSize;
+    unsigned int m_bufferSize;
 };
 
 

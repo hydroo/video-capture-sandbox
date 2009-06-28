@@ -10,6 +10,7 @@ class QHBoxLayout;
 class QLabel;
 class QPushButton;
 class QVBoxLayout;
+class Camera;
 
 
 class MainWindow : public QMainWindow
@@ -18,7 +19,7 @@ class MainWindow : public QMainWindow
 
 public:
 
-    MainWindow(QWidget *parent);
+    MainWindow(QWidget *parent, Camera& camera);
     ~MainWindow();
 
     virtual QSize sizeHint() const;
@@ -39,6 +40,8 @@ private:
     QWidget *m_centralWidget;
     QLabel *m_rawImageLabel;
     QPushButton *m_startStopButton;
+
+    Camera& m_camera;
 
 private:
 
