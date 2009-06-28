@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 using std::cerr;
+using std::cout;
 using std::endl;
 using std::make_pair;
 using std::pair;
@@ -220,53 +221,234 @@ void Camera::finish()
 }
 
 
+void Camera::printDeviceInfo() const
+{
+    // cerr << __PRETTY_FUNCTION__ << endl;
+    assert(m_fileDescriptor != -1);
+
+	struct v4l2_capability cap;
+	/* check capabilities */
+	if (xioctl(m_fileDescriptor, VIDIOC_QUERYCAP, &cap) == -1) {
+        if (EINVAL == errno) {
+            cerr << "Device is no V4L2 device." << endl;
+            assert(0);
+        } else {
+            cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYCAP " << errno << strerror(errno) << endl;
+        }
+	}
+
+    cout << "Device info:" << endl
+            << "  driver: " << cap.driver << endl
+            << "  card: " << cap.card << endl
+            << "  bus info: " << cap.bus_info << endl
+            << "  version: " << cap.version << endl;
+
+    cout << "  supports: ";
+
+	if (cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) {
+        cout << "capture, ";
+    }
+
+	if (cap.capabilities & V4L2_CAP_STREAMING) {
+        cout << "streaming";
+    }
+    cout << endl;
+}
+
+
 void Camera::enumerateControls() const
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
-    // TODO
+    assert(m_fileDescriptor != -1);
+
+    struct v4l2_queryctrl ctrl;
+    memset (&ctrl, 0, sizeof(v4l2_queryctrl ));
+
+    cout << "Available Controls:" << endl;
+    for (__u32 id = V4L2_CID_BASE; id < V4L2_CID_LASTP1; id++) {
+        queryControl(id);
+    }
+
+    cout << "Available Private Controls:" << endl;
+    for (__u32 id = V4L2_CID_PRIVATE_BASE;; ++id) {
+        /* an invalid id means we are beyond fence */
+        if (queryControl(id) == true) break;
+    }
 }
 
 
 void Camera::enumerateFormats() const
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
-    // TODO
+    assert(m_fileDescriptor != -1);
+
+    struct FormatRecord
+    {
+        unsigned int id;
+        const char *name;
+    };
+
+    /* copied from the videodev2.h header */
+    FormatRecord pixelFormats[] = {
+        { V4L2_PIX_FMT_RGB332,   "V4L2_PIX_FMT_RGB332" },
+        { V4L2_PIX_FMT_RGB555,   "V4L2_PIX_FMT_RGB555" },
+        { V4L2_PIX_FMT_RGB565,   "V4L2_PIX_FMT_RGB565" },
+        { V4L2_PIX_FMT_RGB555X,  "V4L2_PIX_FMT_RGB555X" },
+        { V4L2_PIX_FMT_RGB565X,  "V4L2_PIX_FMT_RGB565X" },
+        { V4L2_PIX_FMT_BGR24,    "V4L2_PIX_FMT_BGR24" },
+        { V4L2_PIX_FMT_RGB24,    "V4L2_PIX_FMT_RGB24" },
+        { V4L2_PIX_FMT_BGR32,    "V4L2_PIX_FMT_BGR32" },
+        { V4L2_PIX_FMT_RGB32,    "V4L2_PIX_FMT_RGB32" },
+        { V4L2_PIX_FMT_GREY,     "V4L2_PIX_FMT_GREY" },
+        { V4L2_PIX_FMT_YVU410,   "V4L2_PIX_FMT_YVU410" },
+        { V4L2_PIX_FMT_YVU420,   "V4L2_PIX_FMT_YVU420" },
+        { V4L2_PIX_FMT_YUYV,     "V4L2_PIX_FMT_YUYV" },
+        { V4L2_PIX_FMT_UYVY,     "V4L2_PIX_FMT_UYVY" },
+        { V4L2_PIX_FMT_YUV422P,  "V4L2_PIX_FMT_YUV422P" },
+        { V4L2_PIX_FMT_YUV411P,  "V4L2_PIX_FMT_YUV411P" },
+        { V4L2_PIX_FMT_Y41P,     "V4L2_PIX_FMT_Y41P" },
+        { V4L2_PIX_FMT_NV12,     "V4L2_PIX_FMT_NV12" },
+        { V4L2_PIX_FMT_NV21,     "V4L2_PIX_FMT_NV21" },
+        { V4L2_PIX_FMT_YUV410,   "V4L2_PIX_FMT_YUV410" },
+        { V4L2_PIX_FMT_YUV420,   "V4L2_PIX_FMT_YUV420" },
+        { V4L2_PIX_FMT_YYUV,     "V4L2_PIX_FMT_YYUV" },
+        { V4L2_PIX_FMT_HI240,    "V4L2_PIX_FMT_HI240" },
+        { V4L2_PIX_FMT_HM12,     "V4L2_PIX_FMT_HM12" },
+        { V4L2_PIX_FMT_RGB444,   "V4L2_PIX_FMT_RGB444" },
+        { V4L2_PIX_FMT_SBGGR8,   "V4L2_PIX_FMT_SBGGR8" },
+        { V4L2_PIX_FMT_MJPEG,    "V4L2_PIX_FMT_MJPEG" },
+        { V4L2_PIX_FMT_JPEG,     "V4L2_PIX_FMT_JPEG" },
+        { V4L2_PIX_FMT_DV,       "V4L2_PIX_FMT_DV" },
+        { V4L2_PIX_FMT_MPEG,     "V4L2_PIX_FMT_MPEG" },
+        { V4L2_PIX_FMT_WNVA,     "V4L2_PIX_FMT_WNVA" },
+        { V4L2_PIX_FMT_SN9C10X,  "V4L2_PIX_FMT_SN9C10X" },
+        { V4L2_PIX_FMT_PWC1,     "V4L2_PIX_FMT_PWC1" },
+        { V4L2_PIX_FMT_PWC2,     "V4L2_PIX_FMT_PWC2" },
+        { V4L2_PIX_FMT_ET61X251, "V4L2_PIX_FMT_ET61X251" }
+    };
+
+    int formatCount = sizeof(pixelFormats) / sizeof(FormatRecord);
+    
+
+    cout << "Supported Formats: " << endl;
+
+	/* ask for a pixel format enumeration */
+	int ioctlError = 0;
+	int formatIndex = 0;
+
+	while (ioctlError == 0) {
+
+        struct v4l2_fmtdesc format;
+        format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		format.index = formatIndex;
+
+		ioctlError = ioctl (m_fileDescriptor, VIDIOC_ENUM_FMT, &format);
+
+		if (ioctlError == 0) {
+			for (int a = 0; a < formatCount; ++a) {
+				if (format.pixelformat == pixelFormats[a].id) {
+                    cout << "  " << format.description
+                            << ((format.flags & V4L2_FMT_FLAG_COMPRESSED) ? " compressed" : " raw")
+                            << " \"" << pixelFormats[a].name << "\"" << endl;
+					break;
+				}
+			}
+		}
+
+        ++formatIndex;
+	}
 }
 
 
-void Camera::readNewImage()
+unsigned char *Camera::lockBufferForWriting()
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
-    // TODO
-}
 
-
-void Camera::lockBuffer()
-{
-    // cerr << __PRETTY_FUNCTION__ << endl;
-    // TODO
-}
-
-
-const unsigned char *Camera::buffer() const
-{
-    // cerr << __PRETTY_FUNCTION__ << endl;
-    // TODO
     return 0;
 }
 
 
-void Camera::unlockBuffer()
+unsigned char *Camera::lockBufferForReading()
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
-    // TODO
+
+    return 0;
 }
 
 
-void Camera::waitForNewImage()
+void Camera::unlockBuffer(unsigned char *buffer)
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
-    // TODO
+    (void) buffer;
+}
+
+
+bool Camera::queryControl(__u32 id) const
+{
+    bool ret = false;
+    struct v4l2_queryctrl ctrl;
+    memset (&ctrl, 0, sizeof(v4l2_queryctrl ));
+    ctrl.id = id;
+
+    if (xioctl(m_fileDescriptor, VIDIOC_QUERYCTRL, &ctrl) == 0) {
+
+        cout << "  " << ctrl.id - V4L2_CID_BASE << " \"" << ctrl.name << "\""
+                << ((ctrl.flags & V4L2_CTRL_FLAG_DISABLED) ? " " : " not ") << "disabled,"
+                << ((ctrl.flags & V4L2_CTRL_FLAG_GRABBED) ? " " : " not  ") << "grabbed,"
+                << ((ctrl.flags & V4L2_CTRL_FLAG_READ_ONLY) ? " " : " not ") << "readonly,"
+                << ((ctrl.flags & V4L2_CTRL_FLAG_UPDATE) ? " " : " not ") << "update,"
+                << ((ctrl.flags & V4L2_CTRL_FLAG_INACTIVE) ? " " : " not ") << "inactive,"
+                << ((ctrl.flags & V4L2_CTRL_FLAG_SLIDER) ? " " : " not ") << "slider,";
+
+        switch (ctrl.type) {
+        case V4L2_CTRL_TYPE_INTEGER:
+            cout << " integer type";
+            break;
+        case V4L2_CTRL_TYPE_BOOLEAN:
+            cout << " boolean type";
+            break;
+        case V4L2_CTRL_TYPE_MENU:
+            cout << " menu type";
+            break;
+        case V4L2_CTRL_TYPE_BUTTON:
+            cout << " button type";
+            break;
+        case V4L2_CTRL_TYPE_INTEGER64:
+            cout << " integer 64 type";
+            break;
+        case V4L2_CTRL_TYPE_CTRL_CLASS:
+            cout << " control class type";
+            break;
+        default:
+            assert(0);
+        }
+
+        cout << endl;
+
+        if (!(ctrl.flags & V4L2_CTRL_FLAG_DISABLED) && ctrl.type == V4L2_CTRL_TYPE_MENU) {
+
+            struct v4l2_querymenu menu;
+            memset (&menu, 0, sizeof (v4l2_querymenu));
+            menu.id = ctrl.id;
+
+            for (menu.index = ctrl.minimum; ((__s32) menu.index) <= ctrl.maximum; menu.index++) {
+
+                if (xioctl(m_fileDescriptor, VIDIOC_QUERYMENU, &menu) == 0) {
+                    cout << "  " << menu.name << endl;
+                } else {
+                    cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYMENU " << errno << strerror(errno) << endl;
+                }
+            }
+
+        }
+
+    } else if (errno != EINVAL) {
+        cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYCTRL " << errno << strerror(errno) << endl;
+    } else if (errno == EINVAL) {
+        ret = true;
+    }
+
+    return ret;
 }
 
 

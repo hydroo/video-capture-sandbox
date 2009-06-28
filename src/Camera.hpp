@@ -32,27 +32,20 @@ public:
     void init();
     void finish();
 
+    void printDeviceInfo() const;
     /** dont print, but return variables with the content */
     void enumerateControls() const;
     /** dont print, but return variables with the content */
     void enumerateFormats() const;
 
-    /**
-     * reads one new image from the input stream
-     * blocks as long as there is no new image data available
-     * returns after reading the new image fully into the internal buffer
-     */
-    void readNewImage();
-
-    void lockBuffer();
-    const unsigned char *buffer() const;
-    void unlockBuffer();
-
-    /** blocks until there is a new picture to draw */
-    void waitForNewImage();
+    unsigned char *lockBufferForWriting();
+    unsigned char *lockBufferForReading();
+    void unlockBuffer(unsigned char *buffer);
 
 private:
 
+    /** @returns wether the id was a valid one */
+    bool  queryControl(__u32 id) const;
     static int xioctl(int fileDescriptor, int request, void *arg);
 
     std::string m_fileName;

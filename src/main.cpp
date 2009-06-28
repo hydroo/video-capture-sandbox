@@ -43,6 +43,9 @@ int main(int argc, char **args)
     camera.setFileName("/dev/video0");
     camera.setCaptureSize(640, 480);
     camera.init();
+    camera.printDeviceInfo();
+    camera.enumerateFormats();
+    camera.enumerateControls();
 
 
     thread t(bind(ReadThread2, 2/* test*/));
