@@ -33,10 +33,8 @@ public:
     void finish();
 
     void printDeviceInfo() const;
-    /** dont print, but return variables with the content */
-    void enumerateControls() const;
-    /** dont print, but return variables with the content */
-    void enumerateFormats() const;
+    void printControls() const;
+    void printFormats() const;
 
     unsigned char *lockBufferForWriting();
     unsigned char *lockBufferForReading();
@@ -46,6 +44,7 @@ private:
 
     /** @returns wether the id was a valid one */
     bool  queryControl(__u32 id) const;
+    /** helper, which calls ioctl until an undisturbed call has been done */
     static int xioctl(int fileDescriptor, int request, void *arg);
 
     std::string m_fileName;
@@ -63,3 +62,4 @@ private:
 
 
 #endif /* CAMERA_HPP */
+

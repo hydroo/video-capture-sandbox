@@ -27,7 +27,8 @@ Camera::Camera() :
         m_fieldFormat(V4L2_FIELD_NONE),
         m_readTimeOut(2),
         m_bufferOne(0),
-        m_bufferTwo(0)
+        m_bufferTwo(0),
+        m_bufferSize(0)
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
 }
@@ -205,19 +206,23 @@ void Camera::init()
 
 void Camera::finish()
 {
-    assert(m_fileDescriptor != -1);
-    if (close(m_fileDescriptor) == -1) {
-        cerr << __PRETTY_FUNCTION__ << " " << errno << " " << strerror(errno) << endl;
+    if (m_fileDescriptor != -1) {
+        if (close(m_fileDescriptor) == -1) {
+            cerr << __PRETTY_FUNCTION__ << " " << errno << " " << strerror(errno) << endl;
+        }
+        m_fileDescriptor = -1;
     }
-    m_fileDescriptor = -1;
 
-    assert(m_bufferOne != 0);
-    free(m_bufferOne);
-    m_bufferOne = 0;
+    if (m_bufferOne != 0) {
+        assert(m_bufferTwo != 0);
+        assert(m_bufferSize != 0);
 
-    assert(m_bufferTwo != 0);
-    free(m_bufferTwo);
-    m_bufferTwo = 0;
+        free(m_bufferOne);
+        free(m_bufferTwo);
+        m_bufferOne = 0;
+        m_bufferTwo = 0;
+        m_bufferSize = 0;
+    }
 }
 
 
@@ -256,7 +261,7 @@ void Camera::printDeviceInfo() const
 }
 
 
-void Camera::enumerateControls() const
+void Camera::printControls() const
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
     assert(m_fileDescriptor != -1);
@@ -277,7 +282,7 @@ void Camera::enumerateControls() const
 }
 
 
-void Camera::enumerateFormats() const
+void Camera::printFormats() const
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
     assert(m_fileDescriptor != -1);

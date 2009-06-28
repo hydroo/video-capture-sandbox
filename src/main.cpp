@@ -44,8 +44,8 @@ int main(int argc, char **args)
     camera.setCaptureSize(640, 480);
     camera.init();
     camera.printDeviceInfo();
-    camera.enumerateFormats();
-    camera.enumerateControls();
+    camera.printFormats();
+    camera.printControls();
 
 
     thread t(bind(ReadThread2, 2/* test*/));
