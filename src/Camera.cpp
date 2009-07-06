@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cerrno>
+#include <cmath>
 #include <cstring>
 #include <fcntl.h>
 #include <functional>
@@ -12,16 +13,11 @@
 #include <sys/types.h>
 #include <thread>
 #include <unistd.h>
-
+#include <vector>
 
 using namespace std;
 
 
-static void determineCapturePeriodThread(Camera*, pair<double,double>&);
-static void captureThread(Camera* camera);
-
-
-/** helper, which calls ioctl until an undisturbed call has been done */
 static int xioctl(int fileDescriptor, int request, void *arg);
 
 
@@ -36,7 +32,9 @@ Camera::Camera(unsigned int ringBufferCount) :
         m_ringBuffer(0),
         m_ringBufferCount(ringBufferCount),
         m_ringBufferSize(0),
-        m_timerClockId(CLOCK_REALTIME)
+        m_timerClockId(CLOCK_REALTIME),
+        m_captureThread(0),
+        m_captureThreadCancellationFlag(false)
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
 }
@@ -47,6 +45,7 @@ Camera::~Camera()
     // cerr << __PRETTY_FUNCTION__ << endl;
     assert(m_fileDescriptor == -1);
     assert(m_ringBuffer == 0);
+    assert(m_captureThread == 0);
 }
 
 
@@ -112,6 +111,7 @@ void Camera::init()
     
     assert(m_fileDescriptor == -1);
     assert(m_ringBuffer == 0);
+    assert(m_captureThread == 0);
     assert(m_fileName != string());
 
 
@@ -125,7 +125,7 @@ void Camera::init()
     struct stat st;
 
     if (stat(m_fileName.c_str(), &st) == -1) {
-        cerr << __PRETTY_FUNCTION__ << "Cannot identify file. " << errno << strerror(errno) << endl;
+        cerr << __PRETTY_FUNCTION__ << " Cannot identify file. " << errno << strerror(errno) << endl;
     }
 
     if (!S_ISCHR (st.st_mode)) {
@@ -231,6 +231,13 @@ void Camera::init()
 
 void Camera::finish()
 {
+    /* *** stop capturing *** */
+    if (m_captureThread != 0) {
+        stopCapturing();
+    }
+
+
+    /* *** close device *** */
     if (m_fileDescriptor != -1) {
         if (close(m_fileDescriptor) == -1) {
             cerr << __PRETTY_FUNCTION__ << " " << errno << " " << strerror(errno) << endl;
@@ -239,6 +246,7 @@ void Camera::finish()
     }
 
 
+    /* *** free buffers *** */
     if (m_ringBuffer != 0) {
         for(unsigned int a=0; a < m_ringBufferCount; ++a) {
             assert(m_ringBuffer[a] != 0);
@@ -430,12 +438,11 @@ void Camera::unlockBuffer(unsigned char *buffer)
 }
 
 
-pair<double, double> Camera::determineCapturePeriod()
+pair<double, double> Camera::determineCapturePeriod(double secondsToIterate)
 {
     pair<double, double> ret;
 
-
-    thread t(bind(determineCapturePeriodThread, this, ret));
+    thread t(bind(determineCapturePeriodThread, secondsToIterate, this, &ret));
     t.join();
     
     return ret;
@@ -444,7 +451,23 @@ pair<double, double> Camera::determineCapturePeriod()
 
 void Camera::startCapturing()
 {
-    thread t(bind(captureThread, this));
+    m_captureThread = new thread(bind(captureThread, this));
+}
+
+
+void Camera::stopCapturing()
+{
+    assert(m_captureThread != 0);
+    assert(m_captureThread->joinable() == true);
+
+    //cerr << "stop capture {" << endl;
+    m_captureThreadCancellationFlag = true;
+    m_captureThread->join();
+    m_captureThreadCancellationFlag = false;
+    //cerr << "}" << endl;
+
+    delete m_captureThread;
+    m_captureThread = 0;
 }
 
 
@@ -518,24 +541,98 @@ bool Camera::queryControl(__u32 id) const
 
 
 /* *** static functions ***************************************************** */
-static void determineCapturePeriodThread(Camera* camera,
-        pair<double,double>& ret)
+void Camera::determineCapturePeriodThread(double secondsToIterate,
+        Camera* camera, pair<double,double>* ret)
 {
-    (void) camera;
-    (void) ret;
-    cerr << __PRETTY_FUNCTION__ << endl;
+    int fileDescriptor = camera->m_fileDescriptor;
+    unsigned int bufferSize = camera->m_ringBufferSize;
+    clockid_t clockId = camera->m_timerClockId;
+    void *buffer = malloc(camera->m_ringBufferSize);
+    fd_set filedescriptorset;
+    struct timeval tv;
+    int sel;
+    ssize_t readlen;
+    vector<struct timespec> times;
+
+
+    for (;;) {
+        times.resize(times.size()+1);
+        clock_gettime(clockId, &times.back());
+
+        if (difftime(times.back().tv_sec, times.front().tv_sec) > secondsToIterate) {
+            break;
+        }
+
+        FD_ZERO(&filedescriptorset);
+        FD_SET(fileDescriptor, &filedescriptorset);
+        tv.tv_sec = 2;
+        tv.tv_usec = 0;
+
+        /* watch the file handle for new readable data */
+        sel = select(fileDescriptor + 1, &filedescriptorset, NULL, NULL, &tv);
+
+        if (sel == -1 && errno != EINTR) {
+            cerr << __PRETTY_FUNCTION__ << " Select error. " << errno << strerror(errno) << endl;
+            abort();
+        } else if (sel == 0) {
+            cerr << __PRETTY_FUNCTION__ << " Select timeout. " << errno << strerror(errno) << endl;
+            assert(0);
+        }
+
+        /* read from the device */
+        readlen = read(fileDescriptor, buffer, bufferSize);
+
+        if (readlen == -1) {
+            cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << strerror(errno) << endl;
+            assert(0);
+        }
+    }
+    free(buffer);
+
+
+    /* *** compute interval from timestamps *** */
+    vector<double> intervals;
+    for (auto a = times.begin(); a != (times.end()-1); ++a) {
+        auto b = a+1;
+        intervals.push_back(
+                (b->tv_sec + b->tv_nsec / 1000000000.0) -
+                (a->tv_sec + a->tv_nsec / 1000000000.0));
+    }
+
+    /* *** compute period *** */
+    double mean = 0.0;
+    for (auto a = intervals.begin(); a != intervals.end(); ++a) {
+        mean += *a;
+    }
+    mean /= intervals.size();
+
+    /* *** compute standard deviation **/
+    double addedSquares = 0.0;
+    for (auto a = intervals.begin(); a != intervals.end(); ++a) {
+        addedSquares = ((*a - mean) * (*a - mean));
+    }
+    double standardDeviation = sqrt(addedSquares / intervals.size());
+
+    ret->first = mean;
+    ret->second = standardDeviation;
+}
+
+
+void Camera::captureThread(Camera* camera)
+{
+    for(;camera->m_captureThreadCancellationFlag == false;) {
+
+        struct timespec sleepLength = { 2, 0 };
+        clock_nanosleep(CLOCK_REALTIME, 0, &sleepLength, 0);
+
+        cerr << " still capturing" << endl;
+    }
+
     // TODO
 }
 
 
-static void captureThread(Camera* camera)
-{
-    (void) camera;
-    cerr << __PRETTY_FUNCTION__ << endl;
-    // TODO
-}
-
-
+/** helper, which calls ioctl until an undisturbed call has been done */
 int xioctl(int fileDescriptor, int request, void *arg)
 {
     int r;

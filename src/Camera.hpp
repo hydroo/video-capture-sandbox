@@ -10,6 +10,11 @@
 #include <sys/time.h>
 #include <utility>
 
+namespace std
+{
+    class thread;
+}
+
 
 /**
  * @note
@@ -60,13 +65,21 @@ public:
      *
      * @returns average period and standard deviation 
      */
-    std::pair<double, double> determineCapturePeriod();
+    std::pair<double, double> determineCapturePeriod(double secondsToIterate = 5.0);
+
+    /** creates the capture thread */
     void startCapturing();
+    /** blocks until the capture thread is joined */
+    void stopCapturing();
 
 private:
 
     /** @returns wether the id was a valid one */
     bool queryControl(__u32 id) const;
+
+    static void captureThread(Camera* camera);
+    static void determineCapturePeriodThread(double, Camera*,
+            std::pair<double,double>*);
 
     std::string m_fileName;
     int m_fileDescriptor;
@@ -84,6 +97,9 @@ private:
     struct timespec m_timerResolution;
     struct timespec m_timerStart;
     struct timeval m_realStartTime;
+
+    std::thread *m_captureThread;
+    bool m_captureThreadCancellationFlag;
 };
 
 

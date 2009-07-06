@@ -5,15 +5,16 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QVBoxLayout>
+#include "Camera.hpp"
 
-using std::cerr;
-using std::endl;
+using namespace std;
 
 
 MainWindow::MainWindow(QWidget *parent, Camera& camera) :
         QMainWindow(parent),
         m_camera(camera)
 {
+    /* *** init ui *** */
     m_mainLayout = new QHBoxLayout();
     m_buttonLayout = new QVBoxLayout();
 
@@ -35,6 +36,10 @@ MainWindow::MainWindow(QWidget *parent, Camera& camera) :
     m_centralWidget->setLayout(m_mainLayout);
 
     setCentralWidget(m_centralWidget);
+
+
+    /* *** camera initialization*** */
+    m_camera.startCapturing();
 }
 
 
@@ -51,7 +56,7 @@ QSize MainWindow::sizeHint() const
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    (void) event;
+    m_camera.finish();
 }
 
 
