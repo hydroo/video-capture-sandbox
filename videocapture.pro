@@ -16,7 +16,7 @@ CONFIG += warn_on debug
 DEPENDPATH +=
 
 INCLUDEPATH += ./src
-LIBS += -ljpegsimd
+LIBS += -ljpegsimd -lrt
 
 MOC_DIR = tmp/
 UI_DIR = tmp/

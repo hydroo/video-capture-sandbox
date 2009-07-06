@@ -46,6 +46,7 @@ int main(int argc, char **args)
     camera.printDeviceInfo();
     camera.printFormats();
     camera.printControls();
+    camera.printTimerInformation();
 
 
     thread t(bind(ReadThread2, 2/* test*/));

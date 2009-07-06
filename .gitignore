@@ -3,4 +3,5 @@ videocapture
 extern_*
 Makefile
 vimsession
+*.swp
 

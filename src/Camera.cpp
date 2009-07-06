@@ -4,18 +4,19 @@
 #include <cerrno>
 #include <cstring>
 #include <fcntl.h>
+#include <iomanip>
 #include <iostream>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-using std::cerr;
-using std::cout;
-using std::endl;
-using std::make_pair;
-using std::pair;
-using std::string;
+
+using namespace std;
+
+
+/** helper, which calls ioctl until an undisturbed call has been done */
+static int xioctl(int fileDescriptor, int request, void *arg);
 
 
 Camera::Camera(unsigned int ringBufferCount) :
@@ -97,6 +98,13 @@ void Camera::init()
     assert(m_fileDescriptor == -1);
     assert(m_ringBuffer == 0);
     assert(m_fileName != string());
+
+
+    /* *** initialize timer *** */
+    clock_gettime(CLOCK_REALTIME, &m_timerStart);
+    clock_getres(CLOCK_REALTIME, &m_timerResolution);
+    gettimeofday(&m_realStartTime, 0);
+
 
     /* *** open the device file *** */
     struct stat st;
@@ -366,6 +374,24 @@ void Camera::printFormats() const
 }
 
 
+void Camera::printTimerInformation() const
+{
+    struct tm *localTime = localtime(&m_realStartTime.tv_sec);
+
+    cout << "Start Time: "
+            << setw(2) << setfill('0') << localTime->tm_year-100
+            << setw(2) << setfill('0') << localTime->tm_mon+1
+            << setw(2) << setfill('0') << localTime->tm_mday
+            << " "
+            << setw(2) << setfill('0') << localTime->tm_hour
+            << ":"
+            << setw(2) << setfill('0') << localTime->tm_min << endl;
+
+    cout << "Timer Resolution: " << (double) m_timerResolution.tv_sec << "s "
+            << m_timerResolution.tv_nsec << "nsec" << endl;
+}
+
+
 unsigned char *Camera::lockBufferForWriting()
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
@@ -386,6 +412,12 @@ void Camera::unlockBuffer(unsigned char *buffer)
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
     (void) buffer;
+}
+
+
+void Camera::captureThread(Camera& camera)
+{
+    
 }
 
 
@@ -458,7 +490,8 @@ bool Camera::queryControl(__u32 id) const
 }
 
 
-int Camera::xioctl(int fileDescriptor, int request, void *arg)
+/* *** static functions ***************************************************** */
+int xioctl(int fileDescriptor, int request, void *arg)
 {
     int r;
 
