@@ -2,26 +2,13 @@
 
 #include <iostream>
 #include <list>
-#include <functional>
 #include <string>
-#include <thread>
 #include <QApplication>
 #include "Camera.hpp"
 #include "MainWindow.hpp"
 
-using std::bind;
-using std::cerr;
-using std::cout;
-using std::endl;
-using std::list;
-using std::string;
-using std::thread;
 
-
-void ReadThread2(int a)
-{
-    (void) a;
-}
+using namespace std;
 
 
 int main(int argc, char **args)
@@ -48,10 +35,8 @@ int main(int argc, char **args)
     camera.printControls();
     camera.printTimerInformation();
 
-
-    thread t(bind(ReadThread2, 2/* test*/));
-    t.join();
-
+    pair<double, double> captureRate = camera.determineCapturePeriod();
+    cout << "Capture Period: " << captureRate.first << " per second, StdDeviation: " << captureRate.second << endl;
 
 
     MainWindow mainWindow(0, camera);

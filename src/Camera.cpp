@@ -4,19 +4,21 @@
 #include <cerrno>
 #include <cstring>
 #include <fcntl.h>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <thread>
 #include <unistd.h>
 
 
 using namespace std;
 
 
-static void capturePeriodDeterminationThread(Camera&, pair<double,double>&);
-static void captureThread(Camera& camera);
+static void determineCapturePeriodThread(Camera*, pair<double,double>&);
+static void captureThread(Camera* camera);
 
 
 /** helper, which calls ioctl until an undisturbed call has been done */
@@ -433,16 +435,16 @@ pair<double, double> Camera::determineCapturePeriod()
     pair<double, double> ret;
 
 
+    thread t(bind(determineCapturePeriodThread, this, ret));
+    t.join();
     
-    // TODO
-
     return ret;
 }
 
 
-void startCapturing()
+void Camera::startCapturing()
 {
-    // TODO
+    thread t(bind(captureThread, this));
 }
 
 
@@ -516,18 +518,20 @@ bool Camera::queryControl(__u32 id) const
 
 
 /* *** static functions ***************************************************** */
-static void capturePeriodDeterminationThread(Camera& camera,
+static void determineCapturePeriodThread(Camera* camera,
         pair<double,double>& ret)
 {
     (void) camera;
     (void) ret;
+    cerr << __PRETTY_FUNCTION__ << endl;
     // TODO
 }
 
 
-static void captureThread(Camera& camera)
+static void captureThread(Camera* camera)
 {
     (void) camera;
+    cerr << __PRETTY_FUNCTION__ << endl;
     // TODO
 }
 

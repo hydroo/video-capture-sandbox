@@ -36,4 +36,3 @@ SOURCES += ./src/Camera.cpp \
            ./src/RawImageDrawThread.cpp \
            ./src/StreamReadThread.cpp
 
-
