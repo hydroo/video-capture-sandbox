@@ -18,7 +18,7 @@ using std::pair;
 using std::string;
 
 
-Camera::Camera() :
+Camera::Camera(unsigned int ringBufferCount) :
         m_fileName(),
         m_fileDescriptor(-1),
         m_height(0),
@@ -26,9 +26,9 @@ Camera::Camera() :
         m_pixelFormat(V4L2_PIX_FMT_JPEG),
         m_fieldFormat(V4L2_FIELD_NONE),
         m_readTimeOut(2),
-        m_bufferOne(0),
-        m_bufferTwo(0),
-        m_bufferSize(0)
+        m_ringBuffer(0),
+        m_ringBufferCount(ringBufferCount),
+        m_ringBufferSize(0)
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
 }
@@ -38,8 +38,7 @@ Camera::~Camera()
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
     assert(m_fileDescriptor == -1);
-    assert(m_bufferTwo == 0);
-    assert(m_bufferOne== 0);
+    assert(m_ringBuffer == 0);
 }
 
 
@@ -79,7 +78,7 @@ enum v4l2_field Camera::fieldFormat() const
 }
 unsigned int Camera::bufferSize() const
 {
-    return m_bufferSize;
+    return m_ringBufferSize;
 }
 void Camera::setReadTimeOut(unsigned int seconds)
 {
@@ -96,8 +95,7 @@ void Camera::init()
     // cerr << __PRETTY_FUNCTION__ << endl;
     
     assert(m_fileDescriptor == -1);
-    assert(m_bufferTwo == 0);
-    assert(m_bufferOne== 0);
+    assert(m_ringBuffer == 0);
     assert(m_fileName != string());
 
     /* *** open the device file *** */
@@ -195,12 +193,16 @@ void Camera::init()
     if (fmt.fmt.pix.sizeimage < min)
         fmt.fmt.pix.sizeimage = min;
 
-    m_bufferSize = fmt.fmt.pix.sizeimage;
+    m_ringBufferSize = fmt.fmt.pix.sizeimage;
 
     /* *** allocate buffers *** */
-    m_bufferOne = (unsigned char*) malloc(sizeof(unsigned char) * m_bufferSize);
-    m_bufferTwo = (unsigned char*) malloc(sizeof(unsigned char) * m_bufferSize);
-    assert(m_bufferOne != 0 && m_bufferTwo != 0);
+    m_ringBuffer = (unsigned char**) malloc(sizeof(unsigned char*)*m_ringBufferCount);
+    assert(m_ringBuffer != 0);
+
+    for (unsigned int a=0; a < m_ringBufferCount; ++a) {
+        m_ringBuffer[a] = (unsigned char*) malloc(sizeof(unsigned char)*m_ringBufferSize);
+        assert(m_ringBuffer[a] != 0);
+    }
 }
 
 
@@ -213,16 +215,15 @@ void Camera::finish()
         m_fileDescriptor = -1;
     }
 
-    if (m_bufferOne != 0) {
-        assert(m_bufferTwo != 0);
-        assert(m_bufferSize != 0);
 
-        free(m_bufferOne);
-        free(m_bufferTwo);
-        m_bufferOne = 0;
-        m_bufferTwo = 0;
-        m_bufferSize = 0;
+    if (m_ringBuffer != 0) {
+        for(unsigned int a=0; a < m_ringBufferCount; ++a) {
+            assert(m_ringBuffer[a] != 0);
+            free (m_ringBuffer[a]); m_ringBuffer[a] = 0;
+        }
+        free(m_ringBuffer); m_ringBuffer = 0;
     }
+    m_ringBufferSize = 0;
 }
 
 

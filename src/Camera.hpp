@@ -12,7 +12,9 @@
 class Camera
 {
 public:
-    Camera();
+    Camera(unsigned int ringBufferCount = 2);
+    Camera(const Camera&) = delete;
+    Camera& operator=(const Camera&) = delete;
     ~Camera();
 
     void setFileName(const std::string& fileName);
@@ -55,9 +57,11 @@ private:
     enum v4l2_field m_fieldFormat;
     unsigned int m_readTimeOut;
 
-    unsigned char *m_bufferOne;
-    unsigned char *m_bufferTwo;
-    unsigned int m_bufferSize;
+    unsigned char **m_ringBuffer;
+    unsigned int m_ringBufferCount;
+    unsigned int m_ringBufferSize;
+
+    // asdf
 };
 
 

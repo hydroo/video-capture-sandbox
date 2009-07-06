@@ -38,7 +38,7 @@ int main(int argc, char **args)
     /* evaluate arguments start */
     /* evaluate arguments end */
 
-    Camera camera;
+    Camera camera(2);
 
     camera.setFileName("/dev/video0");
     camera.setCaptureSize(640, 480);
