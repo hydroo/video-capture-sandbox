@@ -55,8 +55,13 @@ public:
     unsigned char *lockBufferForReading();
     void unlockBuffer(unsigned char *buffer);
 
-
-    static void captureThread(Camera& camera);
+    /**
+     * might block for several seconds
+     *
+     * @returns average period and standard deviation 
+     */
+    std::pair<double, double> determineCapturePeriod();
+    void startCapturing();
 
 private:
 

@@ -15,6 +15,10 @@
 using namespace std;
 
 
+static void capturePeriodDeterminationThread(Camera&, pair<double,double>&);
+static void captureThread(Camera& camera);
+
+
 /** helper, which calls ioctl until an undisturbed call has been done */
 static int xioctl(int fileDescriptor, int request, void *arg);
 
@@ -424,9 +428,21 @@ void Camera::unlockBuffer(unsigned char *buffer)
 }
 
 
-void Camera::captureThread(Camera& camera)
+pair<double, double> Camera::determineCapturePeriod()
 {
+    pair<double, double> ret;
+
+
     
+    // TODO
+
+    return ret;
+}
+
+
+void startCapturing()
+{
+    // TODO
 }
 
 
@@ -500,6 +516,22 @@ bool Camera::queryControl(__u32 id) const
 
 
 /* *** static functions ***************************************************** */
+static void capturePeriodDeterminationThread(Camera& camera,
+        pair<double,double>& ret)
+{
+    (void) camera;
+    (void) ret;
+    // TODO
+}
+
+
+static void captureThread(Camera& camera)
+{
+    (void) camera;
+    // TODO
+}
+
+
 int xioctl(int fileDescriptor, int request, void *arg)
 {
     int r;
