@@ -11,6 +11,11 @@
 #include <utility>
 
 
+/**
+ * @note
+ *  * changes in the most settings take effect when newly initializing the
+ *    instance
+ */
 class Camera
 {
 public:
@@ -33,6 +38,10 @@ public:
 
     void setReadTimeOut(unsigned int seconds);
     unsigned int readTimeOut() const;
+
+    void setClockId(clockid_t);
+    clockid_t clockId() const;
+
 
     void init();
     void finish();
@@ -66,6 +75,7 @@ private:
     unsigned int m_ringBufferCount;
     unsigned int m_ringBufferSize;
 
+    clockid_t m_timerClockId;
     struct timespec m_timerResolution;
     struct timespec m_timerStart;
     struct timeval m_realStartTime;

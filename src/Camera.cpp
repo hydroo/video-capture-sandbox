@@ -29,7 +29,8 @@ Camera::Camera(unsigned int ringBufferCount) :
         m_readTimeOut(2),
         m_ringBuffer(0),
         m_ringBufferCount(ringBufferCount),
-        m_ringBufferSize(0)
+        m_ringBufferSize(0),
+        m_timerClockId(CLOCK_REALTIME)
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
 }
@@ -89,6 +90,14 @@ unsigned int Camera::readTimeOut() const
 {
     return m_readTimeOut;
 }
+void Camera::setClockId(clockid_t id)
+{
+    m_timerClockId = id;
+}
+clockid_t Camera::clockId() const
+{
+    return m_timerClockId;
+}
 
 
 void Camera::init()
@@ -101,8 +110,8 @@ void Camera::init()
 
 
     /* *** initialize timer *** */
-    clock_gettime(CLOCK_REALTIME, &m_timerStart);
-    clock_getres(CLOCK_REALTIME, &m_timerResolution);
+    clock_gettime(m_timerClockId, &m_timerStart);
+    clock_getres(m_timerClockId, &m_timerResolution);
     gettimeofday(&m_realStartTime, 0);
 
 
