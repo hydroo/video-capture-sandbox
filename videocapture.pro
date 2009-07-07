@@ -26,13 +26,9 @@ OBJECTS_DIR = tmp/
 DEFINES += 
 
 HEADERS += ./src/Camera.hpp \
-           ./src/MainWindow.hpp \
-           ./src/RawImageDrawThread.hpp \
-           ./src/StreamReadThread.hpp
+           ./src/MainWindow.hpp
 
 SOURCES += ./src/Camera.cpp \
            ./src/main.cpp \
-           ./src/MainWindow.cpp \
-           ./src/RawImageDrawThread.cpp \
-           ./src/StreamReadThread.cpp
+           ./src/MainWindow.cpp
 
