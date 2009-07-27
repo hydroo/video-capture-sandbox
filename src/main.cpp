@@ -37,7 +37,7 @@ int main(int argc, char **args)
 
     /*pair<double, double> captureRate = camera.determineCapturePeriod();
     cout << "Capture Period: " << captureRate.first
-            << " per second, StdDeviation: " << fixed << captureRate.second << endl;*/
+            << "s, StdDeviation: " << fixed << captureRate.second << endl;*/
 
 
     MainWindow mainWindow(0, camera);
