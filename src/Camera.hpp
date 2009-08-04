@@ -89,9 +89,9 @@ private:
     enum v4l2_field m_fieldFormat;
     unsigned int m_readTimeOut;
 
-    unsigned char **m_ringBuffer;
-    unsigned int m_ringBufferLength;
-    unsigned int m_ringBufferSize;
+    unsigned char **m_buffers;
+    unsigned int m_buffersCount;
+    unsigned int m_bufferSize;
 
     clockid_t m_timerClockId;
     struct timespec m_timerResolution;

@@ -21,7 +21,7 @@ using namespace std;
 static int xioctl(int fileDescriptor, int request, void *arg);
 
 
-Camera::Camera(unsigned int ringBufferLength) :
+Camera::Camera(unsigned int buffersCount) :
         m_fileName(),
         m_fileDescriptor(-1),
         m_captureHeight(0),
@@ -29,9 +29,9 @@ Camera::Camera(unsigned int ringBufferLength) :
         m_pixelFormat(V4L2_PIX_FMT_JPEG),
         m_fieldFormat(V4L2_FIELD_NONE),
         m_readTimeOut(2),
-        m_ringBuffer(0),
-        m_ringBufferLength(ringBufferLength),
-        m_ringBufferSize(0),
+        m_buffers(0),
+        m_buffersCount(buffersCount),
+        m_bufferSize(0),
         m_timerClockId(CLOCK_REALTIME),
         m_captureThread(0),
         m_captureThreadCancellationFlag(false)
@@ -44,7 +44,7 @@ Camera::~Camera()
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
     assert(m_fileDescriptor == -1);
-    assert(m_ringBuffer == 0);
+    assert(m_buffers == 0);
     assert(m_captureThread == 0);
 }
 
@@ -85,7 +85,7 @@ enum v4l2_field Camera::fieldFormat() const
 }
 unsigned int Camera::bufferSize() const
 {
-    return m_ringBufferSize;
+    return m_bufferSize;
 }
 void Camera::setReadTimeOut(unsigned int seconds)
 {
@@ -110,7 +110,7 @@ void Camera::init()
     // cerr << __PRETTY_FUNCTION__ << endl;
     
     assert(m_fileDescriptor == -1);
-    assert(m_ringBuffer == 0);
+    assert(m_buffers == 0);
     assert(m_captureThread == 0);
     assert(m_fileName != string());
 
@@ -216,15 +216,15 @@ void Camera::init()
     if (fmt.fmt.pix.sizeimage < min)
         fmt.fmt.pix.sizeimage = min;
 
-    m_ringBufferSize = fmt.fmt.pix.sizeimage;
+    m_bufferSize = fmt.fmt.pix.sizeimage;
 
     /* *** allocate buffers *** */
-    m_ringBuffer = (unsigned char**) malloc(sizeof(unsigned char*)*m_ringBufferLength);
-    assert(m_ringBuffer != 0);
+    m_buffers = (unsigned char**) malloc(sizeof(unsigned char*)*m_buffersCount);
+    assert(m_buffers != 0);
 
-    for (unsigned int a=0; a < m_ringBufferLength; ++a) {
-        m_ringBuffer[a] = (unsigned char*) malloc(sizeof(unsigned char)*m_ringBufferSize);
-        assert(m_ringBuffer[a] != 0);
+    for (unsigned int a=0; a < m_buffersCount; ++a) {
+        m_buffers[a] = (unsigned char*) malloc(sizeof(unsigned char)*m_bufferSize);
+        assert(m_buffers[a] != 0);
     }
 }
 
@@ -247,14 +247,14 @@ void Camera::finish()
 
 
     /* *** free buffers *** */
-    if (m_ringBuffer != 0) {
-        for(unsigned int a=0; a < m_ringBufferLength; ++a) {
-            assert(m_ringBuffer[a] != 0);
-            free (m_ringBuffer[a]); m_ringBuffer[a] = 0;
+    if (m_buffers != 0) {
+        for(unsigned int a=0; a < m_buffersCount; ++a) {
+            assert(m_buffers[a] != 0);
+            free (m_buffers[a]); m_buffers[a] = 0;
         }
-        free(m_ringBuffer); m_ringBuffer = 0;
+        free(m_buffers); m_buffers = 0;
     }
-    m_ringBufferSize = 0;
+    m_bufferSize = 0;
 }
 
 
@@ -562,9 +562,9 @@ void Camera::determineCapturePeriodThread(double secondsToIterate,
         Camera* camera, pair<double,double>* ret)
 {
     int fileDescriptor = camera->m_fileDescriptor;
-    unsigned int bufferSize = camera->m_ringBufferSize;
+    unsigned int bufferSize = camera->m_bufferSize;
     clockid_t clockId = camera->m_timerClockId;
-    void *buffer = malloc(camera->m_ringBufferSize);
+    void *buffer = malloc(camera->m_bufferSize);
     fd_set filedescriptorset;
     struct timeval tv;
     int sel;
