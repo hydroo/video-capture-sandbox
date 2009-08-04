@@ -4,4 +4,4 @@ extern_*
 Makefile
 vimsession
 *.swp
-
+*~
