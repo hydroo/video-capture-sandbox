@@ -225,6 +225,8 @@ void Camera::init()
     for (unsigned int a=0; a < m_buffersCount; ++a) {
         m_buffers[a] = (unsigned char*) malloc(sizeof(unsigned char)*m_bufferSize);
         assert(m_buffers[a] != 0);
+
+        m_timelySortedBuffers.push_back(SortedBuffersItem({numeric_limits<time_t>::max(), 0}, m_buffers[a]));
     }
 }
 

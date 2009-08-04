@@ -5,6 +5,7 @@
 #include "Prereqs.hpp"
 
 #include <ctime>
+#include <deque>
 #include <linux/videodev2.h>
 #include <string>
 #include <sys/time.h>
@@ -56,8 +57,9 @@ public:
     void printFormats() const;
     void printTimerInformation() const;
 
-    unsigned char *lockBufferForWriting();
+    /** @depricated */
     unsigned char *lockBufferForReading();
+    /** @depricated */
     void unlockBuffer(unsigned char *buffer);
 
     /**
@@ -73,6 +75,9 @@ public:
     void stopCapturing();
 
 private:
+
+    /** @depricated */
+    unsigned char *lockBufferForWriting();
 
     /** @returns wether the id was a valid one */
     bool queryControl(__u32 id) const;
@@ -92,6 +97,18 @@ private:
     unsigned char **m_buffers;
     unsigned int m_buffersCount;
     unsigned int m_bufferSize;
+
+    struct SortedBuffersItem
+    {
+        SortedBuffersItem(timespec t, unsigned char *b) :
+                time(t), writeProtection(false), buffer(b) {}
+
+        timespec time;
+        bool writeProtection;
+        unsigned char *buffer;
+    };
+
+    std::deque<SortedBuffersItem> m_timelySortedBuffers;
 
     clockid_t m_timerClockId;
     struct timespec m_timerResolution;
