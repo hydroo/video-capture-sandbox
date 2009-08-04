@@ -61,7 +61,7 @@ public:
     void unlockBuffer(unsigned char *buffer);
 
     /**
-     * might block for several seconds
+     * blocks for several seconds
      *
      * @returns average period and standard deviation 
      */
@@ -83,14 +83,14 @@ private:
 
     std::string m_fileName;
     int m_fileDescriptor;
-    unsigned int m_height;
-    unsigned int m_width;
+    unsigned int m_captureHeight;
+    unsigned int m_captureWidth;
     __u32 m_pixelFormat;
     enum v4l2_field m_fieldFormat;
     unsigned int m_readTimeOut;
 
     unsigned char **m_ringBuffer;
-    unsigned int m_ringBufferCount;
+    unsigned int m_ringBufferLength;
     unsigned int m_ringBufferSize;
 
     clockid_t m_timerClockId;

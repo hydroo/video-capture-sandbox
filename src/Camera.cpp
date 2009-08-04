@@ -21,16 +21,16 @@ using namespace std;
 static int xioctl(int fileDescriptor, int request, void *arg);
 
 
-Camera::Camera(unsigned int ringBufferCount) :
+Camera::Camera(unsigned int ringBufferLength) :
         m_fileName(),
         m_fileDescriptor(-1),
-        m_height(0),
-        m_width(0),
+        m_captureHeight(0),
+        m_captureWidth(0),
         m_pixelFormat(V4L2_PIX_FMT_JPEG),
         m_fieldFormat(V4L2_FIELD_NONE),
         m_readTimeOut(2),
         m_ringBuffer(0),
-        m_ringBufferCount(ringBufferCount),
+        m_ringBufferLength(ringBufferLength),
         m_ringBufferSize(0),
         m_timerClockId(CLOCK_REALTIME),
         m_captureThread(0),
@@ -59,12 +59,12 @@ const string& Camera::fileName() const
 }
 void Camera::setCaptureSize(unsigned int width, unsigned int height)
 {
-    m_width = width;
-    m_height = height;
+    m_captureWidth = width;
+    m_captureHeight = height;
 }
 pair<unsigned int, unsigned int> Camera::captureSize() const
 {
-    return make_pair(m_width, m_height);
+    return make_pair(m_captureWidth, m_captureHeight);
 }
 __u32 Camera::pixelFormat() const
 {
@@ -179,8 +179,8 @@ void Camera::init()
     memset(&fmt, 0, sizeof(v4l2_format));
 
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    fmt.fmt.pix.width = m_width;
-    fmt.fmt.pix.height = m_height;
+    fmt.fmt.pix.width = m_captureWidth;
+    fmt.fmt.pix.height = m_captureHeight;
     fmt.fmt.pix.pixelformat = m_pixelFormat;
     fmt.fmt.pix.field = m_fieldFormat;
 
@@ -189,20 +189,20 @@ void Camera::init()
         finish(); return;
     }
 
-    if (fmt.fmt.pix.width != m_width || fmt.fmt.pix.height != m_height ||
+    if (fmt.fmt.pix.width != m_captureWidth || fmt.fmt.pix.height != m_captureHeight ||
             fmt.fmt.pix.pixelformat != m_pixelFormat ||
             fmt.fmt.pix.field != m_fieldFormat) {
 
         cerr << "Your parameters were changed: "
-                << m_width << "x" << m_height << " in "
+                << m_captureWidth << "x" << m_captureHeight << " in "
                 << pixelFormatString() << ", " << m_fieldFormat << " -> ";
 
-        m_width = fmt.fmt.pix.width;
-        m_height = fmt.fmt.pix.height;
+        m_captureWidth = fmt.fmt.pix.width;
+        m_captureHeight = fmt.fmt.pix.height;
         m_pixelFormat = fmt.fmt.pix.pixelformat;
         m_fieldFormat = fmt.fmt.pix.field;
 
-        cerr << m_width << "x" << m_height << " in "
+        cerr << m_captureWidth << "x" << m_captureHeight << " in "
                 << pixelFormatString() << ", " << m_fieldFormat << endl;
     }
 
@@ -219,10 +219,10 @@ void Camera::init()
     m_ringBufferSize = fmt.fmt.pix.sizeimage;
 
     /* *** allocate buffers *** */
-    m_ringBuffer = (unsigned char**) malloc(sizeof(unsigned char*)*m_ringBufferCount);
+    m_ringBuffer = (unsigned char**) malloc(sizeof(unsigned char*)*m_ringBufferLength);
     assert(m_ringBuffer != 0);
 
-    for (unsigned int a=0; a < m_ringBufferCount; ++a) {
+    for (unsigned int a=0; a < m_ringBufferLength; ++a) {
         m_ringBuffer[a] = (unsigned char*) malloc(sizeof(unsigned char)*m_ringBufferSize);
         assert(m_ringBuffer[a] != 0);
     }
@@ -248,7 +248,7 @@ void Camera::finish()
 
     /* *** free buffers *** */
     if (m_ringBuffer != 0) {
-        for(unsigned int a=0; a < m_ringBufferCount; ++a) {
+        for(unsigned int a=0; a < m_ringBufferLength; ++a) {
             assert(m_ringBuffer[a] != 0);
             free (m_ringBuffer[a]); m_ringBuffer[a] = 0;
         }
@@ -637,7 +637,7 @@ void Camera::determineCapturePeriodThread(double secondsToIterate,
 
 void Camera::captureThread(Camera* camera)
 {
-    for(;camera->m_captureThreadCancellationFlag == false;) {
+    while (camera->m_captureThreadCancellationFlag == false) {
 
         struct timespec sleepLength = { 2, 0 };
         clock_nanosleep(CLOCK_REALTIME, 0, &sleepLength, 0);

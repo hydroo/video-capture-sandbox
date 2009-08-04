@@ -1,7 +1,7 @@
 QMAKE_CXX = g++-4.4
 QMAKE_CXXFLAGS = -std=c++0x
 QMAKE_CC = gcc-4.4
-QMAKE_CFLAGS = gcc-4.4
+QMAKE_CFLAGS = 
 QMAKE_LINK = g++-4.4
 QMAKE_LFLAGS = -std=c++0x
 
