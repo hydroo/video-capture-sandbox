@@ -60,7 +60,7 @@ public:
     {
         timespec time;
         /** if 0 -> writeable, readable; if > 0 -> readable */
-        unsigned int readerCount;
+        int readerCount;
         unsigned char *buffer;
     };
 

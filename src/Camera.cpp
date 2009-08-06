@@ -459,8 +459,9 @@ void Camera::unlock(const deque<const Buffer*>& buffers)
     for (auto it = buffers.begin(); it != buffers.end(); ++it) {
         for (auto it2 = m_timelySortedBuffers.begin(); it2 != m_timelySortedBuffers.end(); ++it2) {
 
-            if (&(*it) == &(*it2)) {
-                --(*it2)->readerCount;
+            if (*it == *it2) {
+                --((*it2)->readerCount);
+                assert((*it2)->readerCount >= 0);
             }
         }
     }
@@ -474,9 +475,12 @@ unsigned int Camera::newerBuffersAvailable(const timespec& newerThan)
     auto it = m_timelySortedBuffers.begin();
 
     m_timelySortedBuffersMutex.lock();
+
+    // cerr << (*it)->time.tv_sec - newerThan.tv_sec << " " << (*it)->time.tv_nsec - newerThan.tv_nsec << endl;
+
     for (; it != m_timelySortedBuffers.end(); ++it) {
         if ((((*it)->time.tv_sec - newerThan.tv_sec) > 0) ||
-                ((((*it)->time.tv_sec - newerThan.tv_sec) == 0) && (((*it)->time.tv_nsec - newerThan.tv_nsec) > 0))
+                ((((*it)->time.tv_sec - newerThan.tv_sec) == 0) && (((*it)->time.tv_nsec - newerThan.tv_nsec) >= 0))
                 ) {
             break;
         }
@@ -484,8 +488,6 @@ unsigned int Camera::newerBuffersAvailable(const timespec& newerThan)
 
     }
     m_timelySortedBuffersMutex.unlock();
-
-    if (ret == 0) cerr << " woot " << endl;
 
     return ret;
 }

@@ -81,7 +81,7 @@ void MainWindow::paintThread(MainWindow *window)
     timespec lastpicture = {numeric_limits<time_t>::max(), 0};
 
     while (window->m_paintThreadCancellationFlag == false) {
-
+#if 1
         // cerr << camera->newerBuffersAvailable(lastpicture) << endl;
         
         if (camera->newerBuffersAvailable(lastpicture) > 0) {
@@ -96,7 +96,14 @@ void MainWindow::paintThread(MainWindow *window)
             cerr << "read " << buffer << endl;
 
             camera->unlock(buffers);
+
+        } else {
+
+            // struct timespec sleepLength = { 1, 0 };
+            // clock_nanosleep(CLOCK_REALTIME, 0, &sleepLength, 0);
+
         }
+#endif
     }
 }
 
