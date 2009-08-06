@@ -21,7 +21,7 @@ using namespace std;
 static int xioctl(int fileDescriptor, int request, void *arg);
 
 
-Camera::Camera(unsigned int buffersCount) :
+Camera::Camera() :
         m_fileName(),
         m_fileDescriptor(-1),
         m_captureHeight(0),
@@ -29,8 +29,6 @@ Camera::Camera(unsigned int buffersCount) :
         m_pixelFormat(V4L2_PIX_FMT_JPEG),
         m_fieldFormat(V4L2_FIELD_NONE),
         m_readTimeOut(2),
-        m_buffers(0),
-        m_buffersCount(buffersCount),
         m_bufferSize(0),
         m_timerClockId(CLOCK_REALTIME),
         m_captureThread(0),
@@ -44,7 +42,7 @@ Camera::~Camera()
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
     assert(m_fileDescriptor == -1);
-    assert(m_buffers == 0);
+    assert(m_buffers.empty() == true);
     assert(m_captureThread == 0);
 }
 
@@ -105,12 +103,13 @@ clockid_t Camera::clockId() const
 }
 
 
-void Camera::init()
+void Camera::init(unsigned int buffersCount)
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
-    
+    //
+    assert(buffersCount > 1);
+    assert(m_buffers.empty() == true);
     assert(m_fileDescriptor == -1);
-    assert(m_buffers == 0);
     assert(m_captureThread == 0);
     assert(m_fileName != string());
 
@@ -219,14 +218,15 @@ void Camera::init()
     m_bufferSize = fmt.fmt.pix.sizeimage;
 
     /* *** allocate buffers *** */
-    m_buffers = (unsigned char**) malloc(sizeof(unsigned char*)*m_buffersCount);
-    assert(m_buffers != 0);
+    for (unsigned int a=0; a < buffersCount; ++a) {
+        m_buffers.push_front(Buffer());
 
-    for (unsigned int a=0; a < m_buffersCount; ++a) {
-        m_buffers[a] = (unsigned char*) malloc(sizeof(unsigned char)*m_bufferSize);
-        assert(m_buffers[a] != 0);
+        m_buffers.front().time = {numeric_limits<time_t>::max(), 0};
+        m_buffers.front().readerCount = 0;
+        m_buffers.front().buffer = (unsigned char*) malloc(sizeof(unsigned char)*m_bufferSize); 
+        assert(m_buffers.front().buffer != 0);
 
-        m_timelySortedBuffers.push_back(SortedBuffersItem({numeric_limits<time_t>::max(), 0}, m_buffers[a]));
+        m_timelySortedBuffers.push_back(&(m_buffers.front()));
     }
 }
 
@@ -249,12 +249,12 @@ void Camera::finish()
 
 
     /* *** free buffers *** */
-    if (m_buffers != 0) {
-        for(unsigned int a=0; a < m_buffersCount; ++a) {
-            assert(m_buffers[a] != 0);
-            free (m_buffers[a]); m_buffers[a] = 0;
+    if (m_buffers.empty() == false) {
+        for (auto a = m_buffers.begin(); a != m_buffers.end(); ++a) {
+            assert(a->buffer != 0);
+            free (a->buffer); a->buffer = 0;
         }
-        free(m_buffers); m_buffers = 0;
+        m_buffers.clear();
     }
     m_bufferSize = 0;
 }
@@ -434,26 +434,57 @@ void Camera::printTimerInformation() const
 }
 
 
-unsigned char *Camera::lockBufferForWriting()
+deque<const Camera::Buffer*> Camera::lockFirstNBuffers(unsigned int n)
 {
-    // cerr << __PRETTY_FUNCTION__ << endl;
+    std::deque<const Buffer*> ret;
 
-    return 0;
+    m_timelySortedBuffersMutex.lock();
+    unsigned int a = 0;
+    for (auto it = m_timelySortedBuffers.begin(); a < n && it != m_timelySortedBuffers.end(); ++it, ++a) {
+
+        ret.push_back(*it);
+        ++(*it)->readerCount;
+
+    }
+    m_timelySortedBuffersMutex.unlock();
+
+
+    return ret;
 }
 
 
-unsigned char *Camera::lockBufferForReading()
+void Camera::unlock(const deque<const Buffer*>& buffers)
 {
-    // cerr << __PRETTY_FUNCTION__ << endl;
+    m_timelySortedBuffersMutex.lock();
+    for (auto it = buffers.begin(); it != buffers.end(); ++it) {
+        for (auto it2 = m_timelySortedBuffers.begin(); it2 != m_timelySortedBuffers.end(); ++it2) {
 
-    return 0;
+            if (&(*it) == &(*it2)) {
+                --(*it2)->readerCount;
+            }
+        }
+    }
+    m_timelySortedBuffersMutex.unlock();
 }
 
 
-void Camera::unlockBuffer(unsigned char *buffer)
+unsigned int Camera::newerBuffersAvailable(const timespec& newerThan)
 {
-    // cerr << __PRETTY_FUNCTION__ << endl;
-    (void) buffer;
+    unsigned int ret = 0;
+    auto it = m_timelySortedBuffers.begin();
+
+    m_timelySortedBuffersMutex.lock();
+    for (; it != m_timelySortedBuffers.end(); ++it) {
+        if (((*it)->time.tv_sec - newerThan.tv_sec > 0) ||
+                (((*it)->time.tv_sec - newerThan.tv_sec == 0) && ((*it)->time.tv_nsec - newerThan.tv_nsec > 0))
+                ) {
+            break;
+        }
+
+    }
+    m_timelySortedBuffersMutex.unlock();
+
+    return ret;
 }
 
 
@@ -639,15 +670,68 @@ void Camera::determineCapturePeriodThread(double secondsToIterate,
 
 void Camera::captureThread(Camera* camera)
 {
+    int fileDescriptor = camera->m_fileDescriptor;
+    unsigned int bufferSize = camera->m_bufferSize;
+    clockid_t clockId = camera->m_timerClockId;
+    std::deque<Buffer*>& sortedBuffers = camera->m_timelySortedBuffers;
+    std::mutex& sortedBuffersMutex =  camera->m_timelySortedBuffersMutex;
+    fd_set filedescriptorset;
+    struct timeval tv;
+    int sel;
+    ssize_t readlen;
+
+
     while (camera->m_captureThreadCancellationFlag == false) {
 
-        struct timespec sleepLength = { 2, 0 };
-        clock_nanosleep(CLOCK_REALTIME, 0, &sleepLength, 0);
+        FD_ZERO(&filedescriptorset);
+        FD_SET(fileDescriptor, &filedescriptorset);
+        tv.tv_sec = 2;
+        tv.tv_usec = 0;
 
-        cerr << " still capturing" << endl;
+        /* watch the file handle for new readable data */
+        sel = select(fileDescriptor + 1, &filedescriptorset, NULL, NULL, &tv);
+
+        if (sel == -1 && errno != EINTR) {
+            cerr << __PRETTY_FUNCTION__ << " Select error. " << errno << strerror(errno) << endl;
+            abort();
+        } else if (sel == 0) {
+            cerr << __PRETTY_FUNCTION__ << " Select timeout. " << errno << strerror(errno) << endl;
+            assert(0);
+        }
+
+        /* remove the last element if possible */
+        sortedBuffersMutex.lock();
+
+        if (sortedBuffers.back()->readerCount > 0) {
+            cerr << "no writeable buffer present. trying hard" << endl;
+            continue;
+        }
+        Buffer* buffer = sortedBuffers.back();
+        sortedBuffers.pop_back();
+
+        sortedBuffersMutex.unlock();
+
+
+        /* read from the device into the buffer */
+        clock_gettime(clockId, &(buffer->time));
+        readlen = read(fileDescriptor, buffer->buffer, bufferSize);
+
+        if (readlen == -1) {
+            cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << strerror(errno) << endl;
+            assert(0);
+        }
+
+
+        /* insert the newly read buffer as first element - newest picture taken */
+        sortedBuffersMutex.lock();
+        sortedBuffers.push_front(buffer);
+        sortedBuffersMutex.unlock();
+
+        /*for (auto it = sortedBuffers.begin(); it != sortedBuffers.end(); ++it) {
+            cerr << *it << ", ";
+        }
+        cerr << endl;*/
     }
-
-    // TODO
 }
 
 

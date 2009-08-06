@@ -7,6 +7,8 @@
 #include <ctime>
 #include <deque>
 #include <linux/videodev2.h>
+#include <list>
+#include <mutex>
 #include <string>
 #include <sys/time.h>
 #include <utility>
@@ -26,7 +28,7 @@ class Camera
 {
 public:
 
-    Camera(unsigned int ringBufferCount = 2);
+    Camera();
     Camera(const Camera&) = delete;
     Camera& operator=(const Camera&) = delete;
     ~Camera();
@@ -49,7 +51,7 @@ public:
     clockid_t clockId() const;
 
 
-    void init();
+    void init(unsigned int bufferCount = 2);
     void finish();
 
     void printDeviceInfo() const;
@@ -57,10 +59,21 @@ public:
     void printFormats() const;
     void printTimerInformation() const;
 
-    /** @depricated */
-    unsigned char *lockBufferForReading();
-    /** @depricated */
-    void unlockBuffer(unsigned char *buffer);
+    struct Buffer
+    {
+        timespec time;
+        /** if 0 -> writeable, readable; if > 0 -> readable */
+        unsigned int readerCount;
+        unsigned char *buffer;
+    };
+
+    /** n <= bufferCount-1 */
+    std::deque<const Buffer*> lockFirstNBuffers(unsigned int n);
+    void unlock(const std::deque<const Buffer*>& buffers);
+    /** @returns number of newer buffers.
+        when actually locking the buffer this number might defer.
+        It can be larger, or it can be n-1, when previously n ~.~ */
+    unsigned int newerBuffersAvailable(const timespec& newerThan);
 
     /**
      * blocks for several seconds
@@ -75,9 +88,6 @@ public:
     void stopCapturing();
 
 private:
-
-    /** @depricated */
-    unsigned char *lockBufferForWriting();
 
     /** @returns wether the id was a valid one */
     bool queryControl(__u32 id) const;
@@ -94,21 +104,11 @@ private:
     enum v4l2_field m_fieldFormat;
     unsigned int m_readTimeOut;
 
-    unsigned char **m_buffers;
-    unsigned int m_buffersCount;
+
     unsigned int m_bufferSize;
-
-    struct SortedBuffersItem
-    {
-        SortedBuffersItem(timespec t, unsigned char *b) :
-                time(t), writeProtection(false), buffer(b) {}
-
-        timespec time;
-        bool writeProtection;
-        unsigned char *buffer;
-    };
-
-    std::deque<SortedBuffersItem> m_timelySortedBuffers;
+    std::list<Buffer> m_buffers;
+    std::deque<Buffer*> m_timelySortedBuffers;
+    std::mutex m_timelySortedBuffersMutex;
 
     clockid_t m_timerClockId;
     struct timespec m_timerResolution;

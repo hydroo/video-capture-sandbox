@@ -25,11 +25,11 @@ int main(int argc, char **args)
     /* evaluate arguments start */
     /* evaluate arguments end */
 
-    Camera camera(2);
+    Camera camera;
 
     camera.setFileName("/dev/video0");
-    camera.setCaptureSize(640, 480);
-    camera.init();
+    camera.setCaptureSize(352, 288);
+    camera.init(5);
     camera.printDeviceInfo();
     camera.printFormats();
     camera.printControls();
