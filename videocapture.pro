@@ -1,3 +1,9 @@
+#QMAKE_CXX = vtcxx 
+#QMAKE_CXXFLAGS = -vt:cxx g++-4.4 -std=c++0x
+#QMAKE_CC = gcc-4.4
+#QMAKE_CFLAGS = 
+#QMAKE_LINK = vtcxx
+#QMAKE_LFLAGS = -vt:cxx g++-4.4 -std=c++0x
 QMAKE_CXX = g++-4.4
 QMAKE_CXXFLAGS = -std=c++0x
 QMAKE_CC = gcc-4.4

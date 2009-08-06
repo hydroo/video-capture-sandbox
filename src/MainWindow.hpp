@@ -13,6 +13,9 @@ class QVBoxLayout;
 class Camera;
 
 
+namespace std { class thread; };
+
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -34,6 +37,8 @@ protected slots:
 
 private:
 
+    static void paintThread(MainWindow* window);
+
     QHBoxLayout *m_mainLayout;
     QVBoxLayout *m_buttonLayout;
 
@@ -42,6 +47,10 @@ private:
     QPushButton *m_startStopButton;
 
     Camera& m_camera;
+
+    std::thread *m_paintThread;
+
+    bool m_paintThreadCancellationFlag;
 
 private:
 

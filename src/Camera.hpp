@@ -13,10 +13,7 @@
 #include <sys/time.h>
 #include <utility>
 
-namespace std
-{
-    class thread;
-}
+namespace std { class thread; };
 
 
 /**

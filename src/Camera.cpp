@@ -475,14 +475,17 @@ unsigned int Camera::newerBuffersAvailable(const timespec& newerThan)
 
     m_timelySortedBuffersMutex.lock();
     for (; it != m_timelySortedBuffers.end(); ++it) {
-        if (((*it)->time.tv_sec - newerThan.tv_sec > 0) ||
-                (((*it)->time.tv_sec - newerThan.tv_sec == 0) && ((*it)->time.tv_nsec - newerThan.tv_nsec > 0))
+        if ((((*it)->time.tv_sec - newerThan.tv_sec) > 0) ||
+                ((((*it)->time.tv_sec - newerThan.tv_sec) == 0) && (((*it)->time.tv_nsec - newerThan.tv_nsec) > 0))
                 ) {
             break;
         }
+        ++ret;
 
     }
     m_timelySortedBuffersMutex.unlock();
+
+    if (ret == 0) cerr << " woot " << endl;
 
     return ret;
 }
@@ -727,10 +730,11 @@ void Camera::captureThread(Camera* camera)
         sortedBuffers.push_front(buffer);
         sortedBuffersMutex.unlock();
 
-        /*for (auto it = sortedBuffers.begin(); it != sortedBuffers.end(); ++it) {
+        cerr << "wrote ";
+        for (auto it = sortedBuffers.begin(); it != sortedBuffers.end(); ++it) {
             cerr << *it << ", ";
         }
-        cerr << endl;*/
+        cerr << endl;
     }
 }
 
