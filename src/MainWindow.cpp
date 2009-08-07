@@ -62,6 +62,11 @@ QSize MainWindow::sizeHint() const
 void MainWindow::closeEvent(QCloseEvent * /*event*/)
 {
     m_paintThreadCancellationFlag = true;
+    m_paintThread->join();
+    m_paintThreadCancellationFlag = false;
+    delete m_paintThread;
+    m_paintThread = 0;
+
     m_camera.finish();
 }
 
@@ -78,10 +83,9 @@ void MainWindow::paintThread(MainWindow *window)
     Camera* camera = &(window->m_camera);
 
 
-    timespec lastpicture = {numeric_limits<time_t>::max(), 0};
+    struct timespec lastpicture = {numeric_limits<time_t>::min(), 0};
 
     while (window->m_paintThreadCancellationFlag == false) {
-#if 1
         // cerr << camera->newerBuffersAvailable(lastpicture) << endl;
         
         if (camera->newerBuffersAvailable(lastpicture) > 0) {
@@ -93,17 +97,16 @@ void MainWindow::paintThread(MainWindow *window)
 
             /* do something with the picture */
 
-            cerr << "read " << buffer << endl;
+            // cerr << "read " << buffer << endl;
 
             camera->unlock(buffers);
 
         } else {
 
-            // struct timespec sleepLength = { 1, 0 };
-            // clock_nanosleep(CLOCK_REALTIME, 0, &sleepLength, 0);
+            struct timespec sleepLength = { 0, 1000 };
+            clock_nanosleep(CLOCK_REALTIME, 0, &sleepLength, 0);
 
         }
-#endif
     }
 }
 

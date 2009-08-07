@@ -221,7 +221,7 @@ void Camera::init(unsigned int buffersCount)
     for (unsigned int a=0; a < buffersCount; ++a) {
         m_buffers.push_front(Buffer());
 
-        m_buffers.front().time = {numeric_limits<time_t>::max(), 0};
+        m_buffers.front().time = {numeric_limits<time_t>::min(), 0};
         m_buffers.front().readerCount = 0;
         m_buffers.front().buffer = (unsigned char*) malloc(sizeof(unsigned char)*m_bufferSize); 
         assert(m_buffers.front().buffer != 0);
@@ -479,8 +479,8 @@ unsigned int Camera::newerBuffersAvailable(const timespec& newerThan)
     // cerr << (*it)->time.tv_sec - newerThan.tv_sec << " " << (*it)->time.tv_nsec - newerThan.tv_nsec << endl;
 
     for (; it != m_timelySortedBuffers.end(); ++it) {
-        if ((((*it)->time.tv_sec - newerThan.tv_sec) > 0) ||
-                ((((*it)->time.tv_sec - newerThan.tv_sec) == 0) && (((*it)->time.tv_nsec - newerThan.tv_nsec) >= 0))
+        if (((*it)->time.tv_sec < newerThan.tv_sec) ||
+                (((*it)->time.tv_sec == newerThan.tv_sec) && ((*it)->time.tv_nsec <= newerThan.tv_nsec))
                 ) {
             break;
         }
@@ -732,11 +732,11 @@ void Camera::captureThread(Camera* camera)
         sortedBuffers.push_front(buffer);
         sortedBuffersMutex.unlock();
 
-        cerr << "wrote ";
+        /*cerr << "wrote ";
         for (auto it = sortedBuffers.begin(); it != sortedBuffers.end(); ++it) {
-            cerr << *it << ", ";
+            cerr << (*it)->time.tv_sec << " " << *it << ", ";
         }
-        cerr << endl;
+        cerr << endl;*/
     }
 }
 
