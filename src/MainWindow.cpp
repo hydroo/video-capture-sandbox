@@ -7,12 +7,12 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <thread>
-#include "Camera.hpp"
+#include "CaptureDevice.hpp"
 
 using namespace std;
 
 
-MainWindow::MainWindow(QWidget *parent, Camera& camera) :
+MainWindow::MainWindow(QWidget *parent, CaptureDevice& camera) :
         QMainWindow(parent),
         m_camera(camera),
         m_paintThreadCancellationFlag(false)
@@ -80,7 +80,10 @@ void MainWindow::startStopButtonClicked(bool checked)
 
 void MainWindow::paintThread(MainWindow *window)
 {
-    Camera* camera = &(window->m_camera);
+    CaptureDevice* camera = &(window->m_camera);
+    static char a = 'a' - 1;
+    if (a == 'z'+1) exit(0);
+    ++a;
 
 
     struct timespec lastpicture = {numeric_limits<time_t>::min(), 0};
@@ -90,14 +93,22 @@ void MainWindow::paintThread(MainWindow *window)
         
         if (camera->newerBuffersAvailable(lastpicture) > 0) {
 
-            deque<const Camera::Buffer*> buffers = camera->lockFirstNBuffers(1);
-            const Camera::Buffer* buffer = buffers[0];
+            deque<const CaptureDevice::Buffer*> buffers = camera->lockFirstNBuffers(1);
+            const CaptureDevice::Buffer* buffer = buffers[0];
 
             lastpicture = buffer->time;
 
             /* do something with the picture */
+#if 0
+            char filename[128] = ""; 
+            sprintf(filename,"%c.pac207", a);
 
-            // cerr << "read " << buffer << endl;
+            FILE *fp = fopen(filename, "wb");
+            if (!fp) exit(1);
+            fwrite(buffer, camera->bufferSize(), sizeof(unsigned char), fp);
+            fclose(fp);
+#endif
+            // cerr << "read " << a << endl;
 
             camera->unlock(buffers);
 

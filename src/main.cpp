@@ -4,7 +4,7 @@
 #include <list>
 #include <string>
 #include <QApplication>
-#include "Camera.hpp"
+#include "CaptureDevice.hpp"
 #include "MainWindow.hpp"
 
 
@@ -25,11 +25,8 @@ int main(int argc, char **args)
     /* evaluate arguments start */
     /* evaluate arguments end */
 
-    Camera camera;
-
-    camera.setFileName("/dev/video0");
-    camera.setCaptureSize(352, 288);
-    camera.init(5);
+    CaptureDevice camera;
+    camera.init("/dev/video0", V4L2_PIX_FMT_RGB24, 352, 288);
     camera.printDeviceInfo();
     camera.printFormats();
     camera.printControls();

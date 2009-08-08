@@ -10,7 +10,7 @@ class QHBoxLayout;
 class QLabel;
 class QPushButton;
 class QVBoxLayout;
-class Camera;
+class CaptureDevice;
 
 
 namespace std { class thread; };
@@ -22,7 +22,7 @@ class MainWindow : public QMainWindow
 
 public:
 
-    MainWindow(QWidget *parent, Camera& camera);
+    MainWindow(QWidget *parent, CaptureDevice& camera);
     ~MainWindow();
 
     virtual QSize sizeHint() const;
@@ -46,7 +46,7 @@ private:
     QLabel *m_rawImageLabel;
     QPushButton *m_startStopButton;
 
-    Camera& m_camera;
+    CaptureDevice& m_camera;
 
     std::thread *m_paintThread;
 

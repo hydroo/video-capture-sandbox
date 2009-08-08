@@ -31,10 +31,10 @@ OBJECTS_DIR = tmp/
 
 DEFINES += 
 
-HEADERS += ./src/Camera.hpp \
+HEADERS += ./src/CaptureDevice.hpp \
            ./src/MainWindow.hpp
 
-SOURCES += ./src/Camera.cpp \
+SOURCES += ./src/CaptureDevice.cpp \
            ./src/main.cpp \
            ./src/MainWindow.cpp
 

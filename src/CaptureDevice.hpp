@@ -13,7 +13,10 @@
 #include <sys/time.h>
 #include <utility>
 
-namespace std { class thread; };
+namespace std
+{
+    class thread;
+};
 
 
 /**
@@ -21,34 +24,48 @@ namespace std { class thread; };
  *  * changes in the most settings take effect when newly initializing the
  *    instance
  */
-class Camera
+class CaptureDevice
 {
 public:
 
-    Camera();
-    Camera(const Camera&) = delete;
-    Camera& operator=(const Camera&) = delete;
-    ~Camera();
+    CaptureDevice();
+    CaptureDevice(const CaptureDevice&) = delete;
+    CaptureDevice& operator=(const CaptureDevice&) = delete;
+    ~CaptureDevice();
 
-    void setFileName(const std::string& fileName);
-    const std::string& fileName() const;
-
-    void setCaptureSize(unsigned int width, unsigned int height);
-    std::pair<unsigned int, unsigned int> captureSize() const;
-
-    __u32 pixelFormat() const;
-    std::string pixelFormatString() const;
-    enum v4l2_field fieldFormat() const;
+    /** accords with the input from init() */
+    clockid_t clockId() const;
+    /** set programatically */
     unsigned int bufferSize() const;
-
-    void setReadTimeOut(unsigned int seconds);
+    /** possibly changed programatically */
+    std::pair<unsigned int, unsigned int> captureSize() const;
+    /** fixed value NONE, possibly changed programatically */
+    enum v4l2_field fieldFormat() const;
+    /** accords with the input from init() */
+    const std::string& fileName() const;
+    /** possibly changed programatically - V4L2_PIX_FMT_* values */
+    __u32 pixelFormat() const;
+    /** pixelFormat as a 4 character string */
+    std::string pixelFormatString() const;
+    /** accords with the input from init() */
     unsigned int readTimeOut() const;
 
-    void setClockId(clockid_t);
-    clockid_t clockId() const;
 
+    /**
+     * init the camera
+     *
+     * @returns true on success, false on failure
+     *
+     * @note on failure, finish() is called implicitely
+     */
+    bool init(const std::string& deviceFileName,
+            __u32 m_pixelFormat,
+            unsigned int captureWidth,
+            unsigned int captureHeight,
+            unsigned int buffersCount = 2,
+            clockid_t clockId = CLOCK_REALTIME,
+            unsigned int readTimeOut = 2);
 
-    void init(unsigned int bufferCount = 2);
     void finish();
 
     void printDeviceInfo() const;
@@ -89,18 +106,17 @@ private:
     /** @returns wether the id was a valid one */
     bool queryControl(__u32 id) const;
 
-    static void captureThread(Camera* camera);
-    static void determineCapturePeriodThread(double, Camera*,
+    static void captureThread(CaptureDevice* camera);
+    static void determineCapturePeriodThread(double, CaptureDevice*,
             std::pair<double,double>*);
 
-    std::string m_fileName;
-    int m_fileDescriptor;
     unsigned int m_captureHeight;
     unsigned int m_captureWidth;
-    __u32 m_pixelFormat;
+    int m_fileDescriptor;
     enum v4l2_field m_fieldFormat;
+    std::string m_deviceFileName;
+    __u32 m_pixelFormat;
     unsigned int m_readTimeOut;
-
 
     unsigned int m_bufferSize;
     std::list<Buffer> m_buffers;

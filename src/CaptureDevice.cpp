@@ -1,4 +1,4 @@
-#include "Camera.hpp"
+#include "CaptureDevice.hpp"
 
 #include <cassert>
 #include <cerrno>
@@ -21,54 +21,32 @@ using namespace std;
 static int xioctl(int fileDescriptor, int request, void *arg);
 
 
-Camera::Camera() :
-        m_fileName(),
-        m_fileDescriptor(-1),
-        m_captureHeight(0),
-        m_captureWidth(0),
-        m_pixelFormat(V4L2_PIX_FMT_JPEG),
-        m_fieldFormat(V4L2_FIELD_NONE),
-        m_readTimeOut(2),
-        m_bufferSize(0),
-        m_timerClockId(CLOCK_REALTIME),
-        m_captureThread(0),
-        m_captureThreadCancellationFlag(false)
+CaptureDevice::CaptureDevice() : m_fileDescriptor(-1)
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
 }
 
 
-Camera::~Camera()
+CaptureDevice::~CaptureDevice()
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
     assert(m_fileDescriptor == -1);
-    assert(m_buffers.empty() == true);
-    assert(m_captureThread == 0);
 }
 
 
-void Camera::setFileName(const string& fileName)
+const string& CaptureDevice::fileName() const
 {
-    m_fileName = fileName;
+    return m_deviceFileName;
 }
-const string& Camera::fileName() const
-{
-    return m_fileName;
-}
-void Camera::setCaptureSize(unsigned int width, unsigned int height)
-{
-    m_captureWidth = width;
-    m_captureHeight = height;
-}
-pair<unsigned int, unsigned int> Camera::captureSize() const
+pair<unsigned int, unsigned int> CaptureDevice::captureSize() const
 {
     return make_pair(m_captureWidth, m_captureHeight);
 }
-__u32 Camera::pixelFormat() const
+__u32 CaptureDevice::pixelFormat() const
 {
     return m_pixelFormat;
 }
-string Camera::pixelFormatString() const
+string CaptureDevice::pixelFormatString() const
 {
     string ret;
     ret.push_back((char) ((m_pixelFormat & 0x000000ff) >> 0));
@@ -77,64 +55,77 @@ string Camera::pixelFormatString() const
     ret.push_back((char) ((m_pixelFormat & 0xff000000) >> 24));
     return  ret;
 }
-enum v4l2_field Camera::fieldFormat() const
+enum v4l2_field CaptureDevice::fieldFormat() const
 {
     return m_fieldFormat;
 }
-unsigned int Camera::bufferSize() const
+unsigned int CaptureDevice::bufferSize() const
 {
     return m_bufferSize;
 }
-void Camera::setReadTimeOut(unsigned int seconds)
-{
-    m_readTimeOut = seconds;
-}
-unsigned int Camera::readTimeOut() const
+unsigned int CaptureDevice::readTimeOut() const
 {
     return m_readTimeOut;
 }
-void Camera::setClockId(clockid_t id)
-{
-    m_timerClockId = id;
-}
-clockid_t Camera::clockId() const
+clockid_t CaptureDevice::clockId() const
 {
     return m_timerClockId;
 }
 
 
-void Camera::init(unsigned int buffersCount)
+bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsigned int captureWidth,
+        unsigned int captureHeight, unsigned int buffersCount, clockid_t clockId,
+        unsigned int readTimeOut )
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
-    //
-    assert(buffersCount > 1);
-    assert(m_buffers.empty() == true);
     assert(m_fileDescriptor == -1);
-    assert(m_captureThread == 0);
-    assert(m_fileName != string());
+    assert(buffersCount > 1);
+
+
+    m_captureHeight = captureHeight;
+    m_captureWidth = captureWidth;
+    m_deviceFileName = deviceFileName;
+    m_fieldFormat = V4L2_FIELD_NONE;
+    m_pixelFormat = pixelFormat;
+    m_readTimeOut = readTimeOut;
+    m_timerClockId = clockId;
+    m_captureThreadCancellationFlag = false;
 
 
     /* *** initialize timer *** */
-    clock_gettime(m_timerClockId, &m_timerStart);
+    int clockret = clock_gettime(m_timerClockId, &m_timerStart);
     clock_getres(m_timerClockId, &m_timerResolution);
     gettimeofday(&m_realStartTime, 0);
+
+    if (clockret == -1) {
+        if (errno == EINVAL) {
+            cerr << __PRETTY_FUNCTION__ << "Choosen clock is not available. abort" << endl;
+        } else {
+            /* unexpected */
+            assert(0);
+        }
+        finish(); return false;
+    }
 
 
     /* *** open the device file *** */
     struct stat st;
 
-    if (stat(m_fileName.c_str(), &st) == -1) {
+    if (stat(m_deviceFileName.c_str(), &st) == -1) {
         cerr << __PRETTY_FUNCTION__ << " Cannot identify file. " << errno << strerror(errno) << endl;
+        finish(); return false;
     }
 
     if (!S_ISCHR (st.st_mode)) {
-        cerr << "File is no device." << endl;
+        cerr << "File is no device."  << endl;
+        finish(); return false;
     }
 
-    m_fileDescriptor = open(m_fileName.c_str(), O_RDWR|O_NONBLOCK, 0);
+    m_fileDescriptor = open(m_deviceFileName.c_str(), O_RDWR|O_NONBLOCK, 0);
 
     if (m_fileDescriptor == -1) {
         cerr << "Cannot open file. " << errno << strerror (errno) << endl;
+        finish(); return false;
     }
 
    
@@ -144,21 +135,21 @@ void Camera::init(unsigned int buffersCount)
     if (xioctl(m_fileDescriptor, VIDIOC_QUERYCAP, &cap) == -1) {
         if (EINVAL == errno) {
             cerr << "File is no V4L2 device." << endl;
-            finish(); return;
+            finish(); return false;
         } else {
             cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYCAP " << errno << strerror(errno) << endl;
-            finish(); return;
+            finish(); return false;
         }
     }
 
     if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
         cerr << "File is no video capture device." << endl;
-        finish(); return;
+        finish(); return false;
     }
 
     if (!(cap.capabilities & V4L2_CAP_READWRITE)) {
         cerr << "File does not support read i/o." << endl;
-        finish(); return;
+        finish(); return false;
     }
 
 
@@ -185,7 +176,7 @@ void Camera::init(unsigned int buffersCount)
 
     if (xioctl(m_fileDescriptor, VIDIOC_S_FMT, &fmt) == -1) {
         cerr << __PRETTY_FUNCTION__ << " VIDIOC_S_FMT " << errno << strerror(errno) << endl;
-        finish(); return;
+        finish(); return false;
     }
 
     if (fmt.fmt.pix.width != m_captureWidth || fmt.fmt.pix.height != m_captureHeight ||
@@ -228,10 +219,12 @@ void Camera::init(unsigned int buffersCount)
 
         m_timelySortedBuffers.push_back(&(m_buffers.front()));
     }
+
+    return true;
 }
 
 
-void Camera::finish()
+void CaptureDevice::finish()
 {
     /* *** stop capturing *** */
     if (m_captureThread != 0) {
@@ -242,7 +235,7 @@ void Camera::finish()
     /* *** close device *** */
     if (m_fileDescriptor != -1) {
         if (close(m_fileDescriptor) == -1) {
-            cerr << __PRETTY_FUNCTION__ << " " << errno << " " << strerror(errno) << endl;
+            cerr << __PRETTY_FUNCTION__ << "Could not close device file. " << errno << " " << strerror(errno) << endl;
         }
         m_fileDescriptor = -1;
     }
@@ -260,7 +253,7 @@ void Camera::finish()
 }
 
 
-void Camera::printDeviceInfo() const
+void CaptureDevice::printDeviceInfo() const
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
     assert(m_fileDescriptor != -1);
@@ -295,7 +288,7 @@ void Camera::printDeviceInfo() const
 }
 
 
-void Camera::printControls() const
+void CaptureDevice::printControls() const
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
     assert(m_fileDescriptor != -1);
@@ -316,7 +309,7 @@ void Camera::printControls() const
 }
 
 
-void Camera::printFormats() const
+void CaptureDevice::printFormats() const
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
     assert(m_fileDescriptor != -1);
@@ -416,7 +409,7 @@ void Camera::printFormats() const
 }
 
 
-void Camera::printTimerInformation() const
+void CaptureDevice::printTimerInformation() const
 {
     struct tm *localTime = localtime(&m_realStartTime.tv_sec);
 
@@ -434,7 +427,7 @@ void Camera::printTimerInformation() const
 }
 
 
-deque<const Camera::Buffer*> Camera::lockFirstNBuffers(unsigned int n)
+deque<const CaptureDevice::Buffer*> CaptureDevice::lockFirstNBuffers(unsigned int n)
 {
     std::deque<const Buffer*> ret;
 
@@ -453,7 +446,7 @@ deque<const Camera::Buffer*> Camera::lockFirstNBuffers(unsigned int n)
 }
 
 
-void Camera::unlock(const deque<const Buffer*>& buffers)
+void CaptureDevice::unlock(const deque<const Buffer*>& buffers)
 {
     m_timelySortedBuffersMutex.lock();
     for (auto it = buffers.begin(); it != buffers.end(); ++it) {
@@ -469,7 +462,7 @@ void Camera::unlock(const deque<const Buffer*>& buffers)
 }
 
 
-unsigned int Camera::newerBuffersAvailable(const timespec& newerThan)
+unsigned int CaptureDevice::newerBuffersAvailable(const timespec& newerThan)
 {
     unsigned int ret = 0;
     auto it = m_timelySortedBuffers.begin();
@@ -493,7 +486,7 @@ unsigned int Camera::newerBuffersAvailable(const timespec& newerThan)
 }
 
 
-pair<double, double> Camera::determineCapturePeriod(double secondsToIterate)
+pair<double, double> CaptureDevice::determineCapturePeriod(double secondsToIterate)
 {
     pair<double, double> ret;
 
@@ -504,13 +497,13 @@ pair<double, double> Camera::determineCapturePeriod(double secondsToIterate)
 }
 
 
-void Camera::startCapturing()
+void CaptureDevice::startCapturing()
 {
     m_captureThread = new thread(bind(captureThread, this));
 }
 
 
-void Camera::stopCapturing()
+void CaptureDevice::stopCapturing()
 {
     assert(m_captureThread != 0);
     assert(m_captureThread->joinable() == true);
@@ -526,7 +519,7 @@ void Camera::stopCapturing()
 }
 
 
-bool Camera::queryControl(__u32 id) const
+bool CaptureDevice::queryControl(__u32 id) const
 {
     bool ret = false;
     struct v4l2_queryctrl ctrl;
@@ -596,8 +589,8 @@ bool Camera::queryControl(__u32 id) const
 
 
 /* *** static functions ***************************************************** */
-void Camera::determineCapturePeriodThread(double secondsToIterate,
-        Camera* camera, pair<double,double>* ret)
+void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
+        CaptureDevice* camera, pair<double,double>* ret)
 {
     int fileDescriptor = camera->m_fileDescriptor;
     unsigned int bufferSize = camera->m_bufferSize;
@@ -673,7 +666,7 @@ void Camera::determineCapturePeriodThread(double secondsToIterate,
 }
 
 
-void Camera::captureThread(Camera* camera)
+void CaptureDevice::captureThread(CaptureDevice* camera)
 {
     int fileDescriptor = camera->m_fileDescriptor;
     unsigned int bufferSize = camera->m_bufferSize;
