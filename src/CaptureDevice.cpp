@@ -185,7 +185,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
 
         cerr << "Your parameters were changed: "
                 << m_captureWidth << "x" << m_captureHeight << " in "
-                << pixelFormatString() << ", " << m_fieldFormat << " -> ";
+                << pixelFormatString() << ", fieldFormat " << m_fieldFormat << " -> ";
 
         m_captureWidth = fmt.fmt.pix.width;
         m_captureHeight = fmt.fmt.pix.height;
@@ -193,7 +193,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
         m_fieldFormat = fmt.fmt.pix.field;
 
         cerr << m_captureWidth << "x" << m_captureHeight << " in "
-                << pixelFormatString() << ", " << m_fieldFormat << endl;
+                << pixelFormatString() << ", fieldFormat " << m_fieldFormat << endl;
     }
 
 
