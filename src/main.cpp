@@ -1,5 +1,6 @@
 #include "Prereqs.hpp"
 
+#include <cassert>
 #include <iostream>
 #include <list>
 #include <string>
@@ -26,7 +27,10 @@ int main(int argc, char **args)
     /* evaluate arguments end */
 
     CaptureDevice camera;
-    camera.init("/dev/video0", V4L2_PIX_FMT_RGB24, 352, 288);
+
+    bool initialized = camera.init("/dev/video0", V4L2_PIX_FMT_RGB24, 352, 288);
+    assert(initialized);
+
     camera.printDeviceInfo();
     camera.printFormats();
     camera.printControls();
