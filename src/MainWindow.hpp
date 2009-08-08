@@ -4,6 +4,7 @@
 
 #include "Prereqs.hpp"
 
+#include <mutex>
 #include <QMainWindow>
 #include <QImage>
 
@@ -57,7 +58,11 @@ private:
 
 private:
 
+    void startPaintThread();
+    void stopPaintThread();
+
     QImage m_currentCaptureImage;
+    std::mutex m_currentCaptureImageMutex;
 
 
 };

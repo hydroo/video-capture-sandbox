@@ -22,7 +22,9 @@ using namespace std;
 static int xioctl(int fileDescriptor, int request, void *arg);
 
 
-CaptureDevice::CaptureDevice() : m_fileDescriptor(-1)
+CaptureDevice::CaptureDevice() :
+        m_fileDescriptor(-1),
+        m_captureThread(0)
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
 }
@@ -500,23 +502,23 @@ pair<double, double> CaptureDevice::determineCapturePeriod(double secondsToItera
 
 void CaptureDevice::startCapturing()
 {
+    assert(m_captureThread == 0);
     m_captureThread = new thread(bind(captureThread, this));
 }
 
 
 void CaptureDevice::stopCapturing()
 {
-    assert(m_captureThread != 0);
-    assert(m_captureThread->joinable() == true);
+    if (m_captureThread != 0) {
+        assert(m_captureThread->joinable() == true);
 
-    //cerr << "stop capture {" << endl;
-    m_captureThreadCancellationFlag = true;
-    m_captureThread->join();
-    m_captureThreadCancellationFlag = false;
-    //cerr << "}" << endl;
+        m_captureThreadCancellationFlag = true;
+        m_captureThread->join();
+        m_captureThreadCancellationFlag = false;
 
-    delete m_captureThread;
-    m_captureThread = 0;
+        delete m_captureThread;
+        m_captureThread = 0;
+    }
 }
 
 
@@ -682,6 +684,7 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
 
     while (camera->m_captureThreadCancellationFlag == false) {
 
+#if 1
         FD_ZERO(&filedescriptorset);
         FD_SET(fileDescriptor, &filedescriptorset);
         tv.tv_sec = 2;
@@ -697,6 +700,7 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
             cerr << __PRETTY_FUNCTION__ << " Select timeout. " << errno << strerror(errno) << endl;
             assert(0);
         }
+#endif
 
         /* remove the last element if possible */
         sortedBuffersMutex.lock();
@@ -713,7 +717,7 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
 
         /* read from the device into the buffer */
         clock_gettime(clockId, &(buffer->time));
-        readlen = read(fileDescriptor, buffer->buffer, bufferSize);
+        readlen = v4l2_read(fileDescriptor, buffer->buffer, bufferSize);
 
         if (readlen == -1) {
             cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << strerror(errno) << endl;

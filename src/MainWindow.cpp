@@ -1,5 +1,6 @@
 #include "MainWindow.hpp"
 
+#include <cassert>
 #include <functional>
 #include <iostream>
 #include <QHBoxLayout>
@@ -17,6 +18,7 @@ using namespace std;
 MainWindow::MainWindow(QWidget *parent, CaptureDevice& camera) :
         QMainWindow(parent),
         m_camera(camera),
+        m_paintThread(0),
         m_paintThreadCancellationFlag(false)
 {
     /* *** init ui *** */
@@ -43,10 +45,6 @@ MainWindow::MainWindow(QWidget *parent, CaptureDevice& camera) :
     setCentralWidget(m_centralWidget);
 
 
-    /* *** camera initialization*** */
-    m_camera.startCapturing();
-
-    m_paintThread = new std::thread(bind(paintThread, this));
 }
 
 
@@ -63,13 +61,9 @@ QSize MainWindow::sizeHint() const
 
 void MainWindow::closeEvent(QCloseEvent * /*event*/)
 {
-    m_paintThreadCancellationFlag = true;
-    m_paintThread->join();
-    m_paintThreadCancellationFlag = false;
-    delete m_paintThread;
-    m_paintThread = 0;
+    stopPaintThread();
+    m_camera.stopCapturing();
 
-    m_camera.finish();
 }
 
 
@@ -77,7 +71,9 @@ void MainWindow::paintEvent(QPaintEvent *event)
 {
     QPainter p(this);
 
+    m_currentCaptureImageMutex.lock();
     p.drawImage(event->rect().topLeft(), m_currentCaptureImage, event->rect());
+    m_currentCaptureImageMutex.unlock();
 
     p.end();
 
@@ -87,20 +83,19 @@ void MainWindow::paintEvent(QPaintEvent *event)
 
 void MainWindow::startStopButtonClicked(bool checked)
 {
-    (void) checked;
-    // TODO
+    if (checked) {
+        m_camera.startCapturing();
+        startPaintThread();
+    } else {
+        stopPaintThread();
+        m_camera.stopCapturing();
+    }
 }
 
 
 void MainWindow::paintThread(MainWindow *window)
 {
     CaptureDevice *camera = &(window->m_camera);
-    QImage &image = window->m_currentCaptureImage;
-
-    static char a = 'a' - 1;
-    if (a == 'z'+1) exit(0);
-    ++a;
-
 
     struct timespec lastpicture = {numeric_limits<time_t>::min(), 0};
 
@@ -114,27 +109,25 @@ void MainWindow::paintThread(MainWindow *window)
 
             lastpicture = buffer->time;
 
-            /* do something with the picture */
 #if 0
-            char filename[128] = ""; 
-            sprintf(filename,"%c.jpeg", a);
-
-            FILE *fp = fopen(filename, "wb");
+            FILE *fp = fopen("capturedatadump", "wb");
             if (!fp) exit(1);
             fwrite(buffer, camera->bufferSize(), sizeof(unsigned char), fp);
             fclose(fp);
 #endif
-            // cerr << "read " << a << endl;
-            
+
             /*cerr << camera->captureSize().first << "x" << camera->captureSize().second << " "
                     << camera->bufferSize() << " " << 352*288*3 << endl;*/
             
-            image = QImage(buffer->buffer, camera->captureSize().first, camera->captureSize().second,
+            window->m_currentCaptureImageMutex.lock();
+            window->m_currentCaptureImage = QImage(buffer->buffer, camera->captureSize().first, camera->captureSize().second,
                     QImage::Format_RGB888);
+            window->m_currentCaptureImageMutex.unlock();
+
+            camera->unlock(buffers);
 
             window->update();
 
-            camera->unlock(buffers);
 
         } else {
 
@@ -142,6 +135,28 @@ void MainWindow::paintThread(MainWindow *window)
             clock_nanosleep(CLOCK_REALTIME, 0, &sleepLength, 0);
 
         }
+    }
+}
+
+
+void MainWindow::startPaintThread()
+{
+    assert(m_paintThread == 0);
+    m_paintThread = new std::thread(bind(paintThread, this));
+}
+
+
+void MainWindow::stopPaintThread()
+{
+    if (m_paintThread != 0) {
+        assert(m_paintThread->joinable() == true);
+
+        m_paintThreadCancellationFlag = true;
+        m_paintThread->join();
+        m_paintThreadCancellationFlag = false;
+
+        delete m_paintThread;
+        m_paintThread = 0;
     }
 }
 
