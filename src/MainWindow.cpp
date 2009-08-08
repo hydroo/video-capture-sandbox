@@ -4,6 +4,8 @@
 #include <iostream>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPainter>
+#include <QPaintEvent>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <thread>
@@ -71,6 +73,18 @@ void MainWindow::closeEvent(QCloseEvent * /*event*/)
 }
 
 
+void MainWindow::paintEvent(QPaintEvent *event)
+{
+    QPainter p(this);
+
+    p.drawImage(event->rect().topLeft(), m_currentCaptureImage, event->rect());
+
+    p.end();
+
+    QWidget::paintEvent(event);
+}
+
+
 void MainWindow::startStopButtonClicked(bool checked)
 {
     (void) checked;
@@ -80,7 +94,9 @@ void MainWindow::startStopButtonClicked(bool checked)
 
 void MainWindow::paintThread(MainWindow *window)
 {
-    CaptureDevice* camera = &(window->m_camera);
+    CaptureDevice *camera = &(window->m_camera);
+    QImage &image = window->m_currentCaptureImage;
+
     static char a = 'a' - 1;
     if (a == 'z'+1) exit(0);
     ++a;
@@ -101,7 +117,7 @@ void MainWindow::paintThread(MainWindow *window)
             /* do something with the picture */
 #if 0
             char filename[128] = ""; 
-            sprintf(filename,"%c.pac207", a);
+            sprintf(filename,"%c.jpeg", a);
 
             FILE *fp = fopen(filename, "wb");
             if (!fp) exit(1);
@@ -109,6 +125,14 @@ void MainWindow::paintThread(MainWindow *window)
             fclose(fp);
 #endif
             // cerr << "read " << a << endl;
+            
+            /*cerr << camera->captureSize().first << "x" << camera->captureSize().second << " "
+                    << camera->bufferSize() << " " << 352*288*3 << endl;*/
+            
+            image = QImage(buffer->buffer, camera->captureSize().first, camera->captureSize().second,
+                    QImage::Format_RGB888);
+
+            window->update();
 
             camera->unlock(buffers);
 

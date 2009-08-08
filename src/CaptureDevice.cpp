@@ -8,6 +8,7 @@
 #include <functional>
 #include <iomanip>
 #include <iostream>
+#include <libv4l2.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -121,7 +122,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
         finish(); return false;
     }
 
-    m_fileDescriptor = open(m_deviceFileName.c_str(), O_RDWR|O_NONBLOCK, 0);
+    m_fileDescriptor = v4l2_open(m_deviceFileName.c_str(), O_RDWR|O_NONBLOCK);
 
     if (m_fileDescriptor == -1) {
         cerr << "Cannot open file. " << errno << strerror (errno) << endl;
@@ -234,7 +235,7 @@ void CaptureDevice::finish()
 
     /* *** close device *** */
     if (m_fileDescriptor != -1) {
-        if (close(m_fileDescriptor) == -1) {
+        if (v4l2_close(m_fileDescriptor) == -1) {
             cerr << __PRETTY_FUNCTION__ << "Could not close device file. " << errno << " " << strerror(errno) << endl;
         }
         m_fileDescriptor = -1;
@@ -628,7 +629,7 @@ void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
         }
 
         /* read from the device */
-        readlen = read(fileDescriptor, buffer, bufferSize);
+        readlen = v4l2_read(fileDescriptor, buffer, bufferSize);
 
         if (readlen == -1) {
             cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << strerror(errno) << endl;
@@ -739,7 +740,7 @@ int xioctl(int fileDescriptor, int request, void *arg)
 {
     int r;
 
-    do r = ioctl (fileDescriptor, request, arg);
+    do r = v4l2_ioctl (fileDescriptor, request, arg);
     while (-1 == r && EINTR == errno);
 
     return r;

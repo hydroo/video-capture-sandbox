@@ -5,9 +5,11 @@
 #include "Prereqs.hpp"
 
 #include <QMainWindow>
+#include <QImage>
 
 class QHBoxLayout;
 class QLabel;
+class QPaintEvent;
 class QPushButton;
 class QVBoxLayout;
 class CaptureDevice;
@@ -30,6 +32,7 @@ public:
 protected:
 
     virtual void closeEvent(QCloseEvent *event);
+    virtual void paintEvent(QPaintEvent *event);
 
 protected slots:
 
@@ -53,6 +56,8 @@ private:
     bool m_paintThreadCancellationFlag;
 
 private:
+
+    QImage m_currentCaptureImage;
 
 
 };
