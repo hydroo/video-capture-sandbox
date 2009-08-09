@@ -624,7 +624,7 @@ void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
 
         if (sel == -1 && errno != EINTR) {
             cerr << __PRETTY_FUNCTION__ << " Select error. " << errno << strerror(errno) << endl;
-            abort();
+            assert(0);
         } else if (sel == 0) {
             cerr << __PRETTY_FUNCTION__ << " Select timeout. " << errno << strerror(errno) << endl;
             assert(0);
