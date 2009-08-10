@@ -63,7 +63,7 @@ public:
             unsigned int captureWidth,
             unsigned int captureHeight,
             unsigned int buffersCount = 2,
-            clockid_t clockId = CLOCK_REALTIME,
+            clockid_t clockId = CLOCK_MONOTONIC,
             unsigned int readTimeOut = 2);
 
     void finish();

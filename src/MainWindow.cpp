@@ -132,7 +132,7 @@ void MainWindow::paintThread(MainWindow *window)
         } else {
 
             struct timespec sleepLength = { 0, 1000 };
-            clock_nanosleep(CLOCK_REALTIME, 0, &sleepLength, 0);
+            clock_nanosleep(CLOCK_MONOTONIC, 0, &sleepLength, 0);
 
         }
     }
