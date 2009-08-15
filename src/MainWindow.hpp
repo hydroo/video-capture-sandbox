@@ -25,7 +25,7 @@ class MainWindow : public QMainWindow
 
 public:
 
-    MainWindow(QWidget *parent, CaptureDevice& camera);
+    MainWindow(QWidget *parent, CaptureDevice& camera1, CaptureDevice& camera2);
     ~MainWindow();
 
     virtual QSize sizeHint() const;
@@ -50,7 +50,8 @@ private:
     QLabel *m_rawImageLabel;
     QPushButton *m_startStopButton;
 
-    CaptureDevice& m_camera;
+    CaptureDevice& m_camera1;
+    CaptureDevice& m_camera2;
 
     std::thread *m_paintThread;
 
@@ -61,8 +62,10 @@ private:
     void startPaintThread();
     void stopPaintThread();
 
-    QImage m_currentCaptureImage;
-    std::mutex m_currentCaptureImageMutex;
+    QImage m_currentCamera1Image;
+    QImage m_currentCamera2Image;
+    std::mutex m_currentCamera1ImageMutex;
+    std::mutex m_currentCamera2ImageMutex;
 
 
 };

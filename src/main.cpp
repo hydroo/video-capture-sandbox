@@ -26,28 +26,24 @@ int main(int argc, char **args)
     /* evaluate arguments start */
     /* evaluate arguments end */
 
-    CaptureDevice camera;
+    CaptureDevice camera1;
+    CaptureDevice camera2;
 
-    bool initialized = camera.init("/dev/video0", V4L2_PIX_FMT_RGB24, 352, 288);
+    bool initialized = camera1.init("/dev/video0", V4L2_PIX_FMT_RGB24, 352, 288);
     assert(initialized);
 
-    camera.printDeviceInfo();
-    camera.printFormats();
-    camera.printControls();
-    camera.printTimerInformation();
-
-    /*pair<double, double> captureRate = camera.determineCapturePeriod();
-    cout << "Capture Period: " << captureRate.first
-            << "s, StdDeviation: " << fixed << captureRate.second << endl;*/
+    bool initialized2 = camera2.init("/dev/video1", V4L2_PIX_FMT_RGB24, 352, 288);
+    assert(initialized2);
 
 
-    MainWindow mainWindow(0, camera);
+    MainWindow mainWindow(0, camera1, camera2);
     mainWindow.show();
 
     int ret = app.exec();
 
 
-    camera.finish();
+    camera1.finish();
+    camera2.finish();
 
 
     return ret;

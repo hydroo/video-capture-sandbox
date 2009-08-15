@@ -8,6 +8,7 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPushButton>
+#include <QtDebug>
 #include <QVBoxLayout>
 #include <thread>
 #include "CaptureDevice.hpp"
@@ -15,9 +16,10 @@
 using namespace std;
 
 
-MainWindow::MainWindow(QWidget *parent, CaptureDevice& camera) :
+MainWindow::MainWindow(QWidget *parent, CaptureDevice& camera1, CaptureDevice& camera2) :
         QMainWindow(parent),
-        m_camera(camera),
+        m_camera1(camera1),
+        m_camera2(camera2),
         m_paintThread(0),
         m_paintThreadCancellationFlag(false)
 {
@@ -43,8 +45,6 @@ MainWindow::MainWindow(QWidget *parent, CaptureDevice& camera) :
     m_centralWidget->setLayout(m_mainLayout);
 
     setCentralWidget(m_centralWidget);
-
-
 }
 
 
@@ -62,8 +62,8 @@ QSize MainWindow::sizeHint() const
 void MainWindow::closeEvent(QCloseEvent * /*event*/)
 {
     stopPaintThread();
-    m_camera.stopCapturing();
-
+    m_camera1.stopCapturing();
+    m_camera2.stopCapturing();
 }
 
 
@@ -71,9 +71,23 @@ void MainWindow::paintEvent(QPaintEvent *event)
 {
     QPainter p(this);
 
-    m_currentCaptureImageMutex.lock();
-    p.drawImage(event->rect().topLeft(), m_currentCaptureImage, event->rect());
-    m_currentCaptureImageMutex.unlock();
+    m_currentCamera1ImageMutex.lock();
+    p.drawImage(event->rect().topLeft(), m_currentCamera1Image, event->rect());
+    m_currentCamera1ImageMutex.unlock();
+
+    QPoint camera2TopLeft = QPoint(m_currentCamera1Image.width(), 0);
+    QRect camera2Rect = QRect(camera2TopLeft, m_currentCamera2Image.size());
+
+    if (event->rect().intersects(camera2Rect)) {
+        m_currentCamera2ImageMutex.lock();
+        p.drawImage(camera2TopLeft,
+                m_currentCamera2Image,
+                QRect(QPoint(0,0), m_currentCamera2Image.size())
+                .intersected(event->rect().translated(m_currentCamera1Image.size().width()*-1,
+                m_currentCamera1Image.size().height()*-1)));
+        m_currentCamera2ImageMutex.unlock();
+    }
+
 
     p.end();
 
@@ -84,57 +98,80 @@ void MainWindow::paintEvent(QPaintEvent *event)
 void MainWindow::startStopButtonClicked(bool checked)
 {
     if (checked) {
-        m_camera.startCapturing();
+        m_camera1.startCapturing();
+        m_camera2.startCapturing();
         startPaintThread();
     } else {
         stopPaintThread();
-        m_camera.stopCapturing();
+        m_camera1.stopCapturing();
+        m_camera2.stopCapturing();
     }
 }
 
 
 void MainWindow::paintThread(MainWindow *window)
 {
-    CaptureDevice *camera = &(window->m_camera);
+    CaptureDevice &m_camera1 = window->m_camera1;
+    CaptureDevice &m_camera2 = window->m_camera2;
+    QImage& m_currentCamera1Image = window->m_currentCamera1Image;
+    QImage& m_currentCamera2Image = window->m_currentCamera2Image;
+    std::mutex& m_currentCamera1ImageMutex = window->m_currentCamera1ImageMutex;
+    std::mutex& m_currentCamera2ImageMutex = window->m_currentCamera2ImageMutex;
+    bool &m_paintThreadCancellationFlag = window->m_paintThreadCancellationFlag;
 
-    struct timespec lastpicture = {numeric_limits<time_t>::min(), 0};
+    struct timespec lastPictureCamera1 = {numeric_limits<time_t>::min(), 0};
+    struct timespec lastPictureCamera2 = {numeric_limits<time_t>::min(), 0};
 
-    while (window->m_paintThreadCancellationFlag == false) {
-        // cerr << camera->newerBuffersAvailable(lastpicture) << endl;
+    while (m_paintThreadCancellationFlag == false) {
+
+        bool capturedSomething = false;
         
-        if (camera->newerBuffersAvailable(lastpicture) > 0) {
+        if (m_camera1.newerBuffersAvailable(lastPictureCamera1) > 0) {
 
-            deque<const CaptureDevice::Buffer*> buffers = camera->lockFirstNBuffers(1);
+            deque<const CaptureDevice::Buffer*> buffers = m_camera1.lockFirstNBuffers(1);
             const CaptureDevice::Buffer* buffer = buffers[0];
 
-            lastpicture = buffer->time;
+            lastPictureCamera1 = buffer->time;
 
-#if 0
-            FILE *fp = fopen("capturedatadump", "wb");
-            if (!fp) exit(1);
-            fwrite(buffer, camera->bufferSize(), sizeof(unsigned char), fp);
-            fclose(fp);
-#endif
+            m_currentCamera1ImageMutex.lock();
+            m_currentCamera1Image = QImage(buffer->buffer, m_camera1.captureSize().first,
+                    m_camera1.captureSize().second, QImage::Format_RGB888);
+            m_currentCamera1ImageMutex.unlock();
 
-            /*cerr << camera->captureSize().first << "x" << camera->captureSize().second << " "
-                    << camera->bufferSize() << " " << 352*288*3 << endl;*/
-            
-            window->m_currentCaptureImageMutex.lock();
-            window->m_currentCaptureImage = QImage(buffer->buffer, camera->captureSize().first, camera->captureSize().second,
-                    QImage::Format_RGB888);
-            window->m_currentCaptureImageMutex.unlock();
+            m_camera1.unlock(buffers);
 
-            camera->unlock(buffers);
+            capturedSomething = true;
+        }
+
+        /* KLUDGE code duplication at its best */
+        if (m_camera2.newerBuffersAvailable(lastPictureCamera2) > 0) {
+
+            deque<const CaptureDevice::Buffer*> buffers = m_camera2.lockFirstNBuffers(1);
+            const CaptureDevice::Buffer* buffer = buffers[0];
+
+            lastPictureCamera2 = buffer->time;
+
+            m_currentCamera2ImageMutex.lock();
+            m_currentCamera2Image = QImage(buffer->buffer, m_camera2.captureSize().first,
+                    m_camera2.captureSize().second, QImage::Format_RGB888);
+            m_currentCamera2ImageMutex.unlock();
+
+            m_camera2.unlock(buffers);
+
+            capturedSomething = true;
+        }
+
+
+        if (capturedSomething) {
 
             window->update();
 
-
         } else {
 
-            struct timespec sleepLength = { 0, 1000 };
+            struct timespec sleepLength = { 0, 100 };
             clock_nanosleep(CLOCK_MONOTONIC, 0, &sleepLength, 0);
 
-        }
+        } 
     }
 }
 
