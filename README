@@ -1,0 +1,4 @@
+Requirements:
+ - libv4l >= 0.6.1 http://people.atrpms.net/~hdegoede/
+ - gcc >= 4.4
+ - qt-dev
