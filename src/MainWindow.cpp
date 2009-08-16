@@ -124,51 +124,58 @@ void MainWindow::paintThread(MainWindow *window)
 
     while (m_paintThreadCancellationFlag == false) {
 
-        bool capturedSomething = false;
+        bool capture1 = m_camera1.newerBuffersAvailable(lastPictureCamera1) > 0;
+        bool capture2 = m_camera2.newerBuffersAvailable(lastPictureCamera2) > 0;
+
+        deque<const CaptureDevice::Buffer*> buffers1;
+        deque<const CaptureDevice::Buffer*> buffers2;
+
+        const CaptureDevice::Buffer* buffer1 = buffers1[0];
+        const CaptureDevice::Buffer* buffer2 = buffers2[0];
         
-        if (m_camera1.newerBuffersAvailable(lastPictureCamera1) > 0) {
+        /* minimized time between two buffer locks */
+        if (capture1) {
+            buffers1 = m_camera1.lockFirstNBuffers(1);
+        }
+        if (capture2) {
+            buffers2 = m_camera2.lockFirstNBuffers(1);
+        }
 
-            deque<const CaptureDevice::Buffer*> buffers = m_camera1.lockFirstNBuffers(1);
-            const CaptureDevice::Buffer* buffer = buffers[0];
+        if (capture1) {
+            buffer1 = buffers1[0];
 
-            lastPictureCamera1 = buffer->time;
+            lastPictureCamera1 = buffer1->time;
 
             m_currentCamera1ImageMutex.lock();
-            m_currentCamera1Image = QImage(buffer->buffer, m_camera1.captureSize().first,
+            m_currentCamera1Image = QImage(buffer1->buffer, m_camera1.captureSize().first,
                     m_camera1.captureSize().second, QImage::Format_RGB888);
             m_currentCamera1ImageMutex.unlock();
-
-            m_camera1.unlock(buffers);
-
-            capturedSomething = true;
+            
+            m_camera1.unlock(buffers1);
         }
 
         /* KLUDGE code duplication at its best */
-        if (m_camera2.newerBuffersAvailable(lastPictureCamera2) > 0) {
+        if (capture2) {
+            buffer2 = buffers2[0];
 
-            deque<const CaptureDevice::Buffer*> buffers = m_camera2.lockFirstNBuffers(1);
-            const CaptureDevice::Buffer* buffer = buffers[0];
-
-            lastPictureCamera2 = buffer->time;
+            lastPictureCamera2 = buffer2->time;
 
             m_currentCamera2ImageMutex.lock();
-            m_currentCamera2Image = QImage(buffer->buffer, m_camera2.captureSize().first,
+            m_currentCamera2Image = QImage(buffer2->buffer, m_camera2.captureSize().first,
                     m_camera2.captureSize().second, QImage::Format_RGB888);
             m_currentCamera2ImageMutex.unlock();
-
-            m_camera2.unlock(buffers);
-
-            capturedSomething = true;
+            
+            m_camera2.unlock(buffers2);
         }
 
 
-        if (capturedSomething) {
+        if (capture1 || capture2) {
 
             window->update();
 
         } else {
 
-            struct timespec sleepLength = { 0, 100 };
+            struct timespec sleepLength = { 0, 1000 };
             clock_nanosleep(CLOCK_MONOTONIC, 0, &sleepLength, 0);
 
         } 

@@ -684,7 +684,6 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
 
     while (camera->m_captureThreadCancellationFlag == false) {
 
-#if 1
         FD_ZERO(&filedescriptorset);
         FD_SET(fileDescriptor, &filedescriptorset);
         tv.tv_sec = 2;
@@ -700,7 +699,6 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
             cerr << __PRETTY_FUNCTION__ << " Select timeout. " << errno << strerror(errno) << endl;
             assert(0);
         }
-#endif
 
         /* remove the last element if possible */
         sortedBuffersMutex.lock();
