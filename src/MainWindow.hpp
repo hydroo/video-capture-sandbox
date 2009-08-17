@@ -8,6 +8,7 @@
 #include <QMainWindow>
 #include <QImage>
 
+class QGroupBox;
 class QHBoxLayout;
 class QLabel;
 class QPaintEvent;
@@ -41,14 +42,23 @@ protected slots:
 
 private:
 
+    void startPaintThread();
+    void stopPaintThread();
+
     static void paintThread(MainWindow* window);
 
     QHBoxLayout *m_mainLayout;
-    QVBoxLayout *m_buttonLayout;
-
+    QVBoxLayout *m_globalButtonsLayout;
     QWidget *m_centralWidget;
-    QLabel *m_rawImageLabel;
     QPushButton *m_startStopButton;
+    QGroupBox *m_camera1GroupBox;
+        QVBoxLayout *m_camera1Layout;
+        QLabel *m_camera1ImageLabel;
+        QPushButton *m_camera1StartStopButton;
+    QGroupBox *m_camera2GroupBox;
+        QVBoxLayout *m_camera2Layout;
+        QLabel *m_camera2ImageLabel;
+        QPushButton *m_camera2StartStopButton;
 
     CaptureDevice& m_camera1;
     CaptureDevice& m_camera2;
@@ -57,16 +67,11 @@ private:
 
     bool m_paintThreadCancellationFlag;
 
-private:
-
-    void startPaintThread();
-    void stopPaintThread();
-
     QImage m_currentCamera1Image;
     QImage m_currentCamera2Image;
+
     std::mutex m_currentCamera1ImageMutex;
     std::mutex m_currentCamera2ImageMutex;
-
 
 };
 

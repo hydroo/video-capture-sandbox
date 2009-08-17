@@ -3,6 +3,7 @@
 #include <cassert>
 #include <functional>
 #include <iostream>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPainter>
@@ -25,25 +26,32 @@ MainWindow::MainWindow(QWidget *parent, CaptureDevice& camera1, CaptureDevice& c
 {
     /* *** init ui *** */
     m_mainLayout = new QHBoxLayout();
-    m_buttonLayout = new QVBoxLayout();
-
-    m_centralWidget = new QWidget();
-
-    m_rawImageLabel = new QLabel();
-    m_rawImageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    m_startStopButton = new QPushButton(tr("Start"));
+    m_globalButtonsLayout = new QVBoxLayout();
+    m_globalButtonsLayout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    m_centralWidget = new QWidget(this);
+    m_startStopButton = new QPushButton(tr("Start"), m_centralWidget);
     m_startStopButton->setCheckable(true);
-    connect(m_startStopButton, SIGNAL(clicked(bool)),
-            this, SLOT(startStopButtonClicked(bool)));
+    connect(m_startStopButton, SIGNAL(clicked(bool)), this, SLOT(startStopButtonClicked(bool)));
+    m_camera1GroupBox = new QGroupBox(tr("Camera 1"), m_centralWidget);
+        m_camera1Layout = new QVBoxLayout();
+        m_camera1Layout ->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+        m_camera1ImageLabel = new QLabel(m_camera1GroupBox);
+        m_camera1ImageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_camera2GroupBox = new QGroupBox(tr("Camera 2"), m_centralWidget);
+        m_camera2Layout = new QVBoxLayout();
+        m_camera2Layout ->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+        m_camera2ImageLabel = new QLabel(m_camera2GroupBox);
+        m_camera2ImageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-    m_buttonLayout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
-    m_buttonLayout->addWidget(m_startStopButton);
-
-    m_mainLayout->addWidget(m_rawImageLabel);
-    m_mainLayout->addLayout(m_buttonLayout);
-
+    m_globalButtonsLayout->addWidget(m_startStopButton);
+    m_camera1Layout->addWidget(m_camera1ImageLabel);
+    m_camera2Layout->addWidget(m_camera2ImageLabel);
+    m_camera1GroupBox->setLayout(m_camera1Layout);
+    m_camera2GroupBox->setLayout(m_camera2Layout);
+    m_mainLayout->addWidget(m_camera1GroupBox);
+    m_mainLayout->addWidget(m_camera2GroupBox);
+    m_mainLayout->addLayout(m_globalButtonsLayout);
     m_centralWidget->setLayout(m_mainLayout);
-
     setCentralWidget(m_centralWidget);
 }
 
@@ -69,27 +77,16 @@ void MainWindow::closeEvent(QCloseEvent * /*event*/)
 
 void MainWindow::paintEvent(QPaintEvent *event)
 {
-    QPainter p(this);
+    /* KLUDGE
+     * pixmaps can only be used from the gui thread.
+     *
+     * Here we are using Qt's queue to get a decent spot when to update the label's images.
+     * Normally one would try to get hold of the GUI thread in a different manner,
+     * but for now this is ok
+     */
 
-    m_currentCamera1ImageMutex.lock();
-    p.drawImage(event->rect().topLeft(), m_currentCamera1Image, event->rect());
-    m_currentCamera1ImageMutex.unlock();
-
-    QPoint camera2TopLeft = QPoint(m_currentCamera1Image.width(), 0);
-    QRect camera2Rect = QRect(camera2TopLeft, m_currentCamera2Image.size());
-
-    if (event->rect().intersects(camera2Rect)) {
-        m_currentCamera2ImageMutex.lock();
-        p.drawImage(camera2TopLeft,
-                m_currentCamera2Image,
-                QRect(QPoint(0,0), m_currentCamera2Image.size())
-                .intersected(event->rect().translated(m_currentCamera1Image.size().width()*-1,
-                m_currentCamera1Image.size().height()*-1)));
-        m_currentCamera2ImageMutex.unlock();
-    }
-
-
-    p.end();
+    m_camera1ImageLabel->setPixmap(QPixmap::fromImage(m_currentCamera1Image));
+    m_camera2ImageLabel->setPixmap(QPixmap::fromImage(m_currentCamera2Image));
 
     QWidget::paintEvent(event);
 }
