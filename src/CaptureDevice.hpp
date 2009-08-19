@@ -105,9 +105,11 @@ public:
         @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-QUERYMENU */
     std::pair<std::list<struct v4l2_queryctrl>, std::list<struct v4l2_querymenu> > controls() const;
 
-    /** @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-CONTROL */
-    void control(struct v4l2_control&) const;
-    void setControl(const struct v4l2_control&);
+    /** @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-CONTROL
+        @returns whether the result is valid - why? -> better error checking to come */
+    bool control(struct v4l2_control&) const;
+    /** @returns whether the call succeeded - why not ? -> better error checking to come */
+    bool setControl(const struct v4l2_control&);
 
 private:
 

@@ -161,7 +161,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
     memset(&cropcap, 0, sizeof(v4l2_cropcap));
 
     cropcap.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    xioctl(m_fileDescriptor, VIDIOC_CROPCAP, &cropcap);
+    xioctl(m_fileDescriptor, VIDIOC_CROPCAP, &cropcap); /* ignore errors */
 
     crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     crop.c = cropcap.defrect;
@@ -269,6 +269,7 @@ void CaptureDevice::printDeviceInfo() const
             assert(0);
         } else {
             cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYCAP " << errno << strerror(errno) << endl;
+            return;
         }
 	}
 
@@ -305,19 +306,19 @@ void CaptureDevice::printControls() const
     for (auto it = ctls.begin(); it != ctls.end(); ++it) {
 
         cout << "  " << it->id - V4L2_CID_BASE << " \"" << it->name << "\""
-                << ((it->flags & V4L2_CTRL_FLAG_DISABLED) ? " " : " not ") << "disabled,"
-                << ((it->flags & V4L2_CTRL_FLAG_GRABBED) ? " " : " not  ") << "grabbed,"
-                << ((it->flags & V4L2_CTRL_FLAG_READ_ONLY) ? " " : " not ") << "readonly,"
-                << ((it->flags & V4L2_CTRL_FLAG_UPDATE) ? " " : " not ") << "update,"
-                << ((it->flags & V4L2_CTRL_FLAG_INACTIVE) ? " " : " not ") << "inactive,"
-                << ((it->flags & V4L2_CTRL_FLAG_SLIDER) ? " " : " not ") << "slider,";
+                << ((it->flags & V4L2_CTRL_FLAG_DISABLED) ? " +" : " !") << "disabled,"
+                << ((it->flags & V4L2_CTRL_FLAG_GRABBED) ? " +" : " !") << "grabbed,"
+                << ((it->flags & V4L2_CTRL_FLAG_READ_ONLY) ? " +" : " !") << "readonly,"
+                << ((it->flags & V4L2_CTRL_FLAG_UPDATE) ? " +" : " !") << "update,"
+                << ((it->flags & V4L2_CTRL_FLAG_INACTIVE) ? " +" : " !") << "inactive,"
+                << ((it->flags & V4L2_CTRL_FLAG_SLIDER) ? " +" : " !") << "slider,";
 
         switch (it->type) {
         case V4L2_CTRL_TYPE_INTEGER:
-            cout << " integer type";
+            cout << " int type";
             break;
         case V4L2_CTRL_TYPE_BOOLEAN:
-            cout << " boolean type";
+            cout << " bool type";
             break;
         case V4L2_CTRL_TYPE_MENU:
             cout << " menu type";
@@ -326,7 +327,7 @@ void CaptureDevice::printControls() const
             cout << " button type";
             break;
         case V4L2_CTRL_TYPE_INTEGER64:
-            cout << " integer 64 type";
+            cout << " int64 type";
             break;
         case V4L2_CTRL_TYPE_CTRL_CLASS:
             cout << " control class type";
@@ -598,15 +599,37 @@ pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > CaptureDevice::c
 }
 
 
-void CaptureDevice::control(struct v4l2_control&) const
+bool CaptureDevice::control(struct v4l2_control& ctl) const
 {
-    // TODO 
+    /* which errors VIDIOC_G_CTRL can throw:
+        http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#VIDIOC-G-CTRL */
+
+    if (xioctl(m_fileDescriptor, VIDIOC_G_CTRL, &ctl) == 0) {
+        ctl.value += 1; // w00t is this? copied from the v4l docs TODO find out if this is right (set->get -> !)
+
+        /* v4l-copied: The driver may clamp the value or return ERANGE, ignored here */
+
+        return true;
+
+    } else  {
+        cerr << __PRETTY_FUNCTION__ << " VIDIOC_G_CTRL " << errno << strerror(errno) << endl;
+        return false;
+    }
 }
 
 
-void CaptureDevice::setControl(const struct v4l2_control&)
+bool CaptureDevice::setControl(const struct v4l2_control& ctl)
 {
-    // TODO 
+    struct v4l2_control copiedCtl = ctl;
+    /* which errors VIDIOC_S_CTRL can throw:
+        http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#VIDIOC-G-CTRL */
+
+    if (xioctl(m_fileDescriptor, VIDIOC_S_CTRL, &copiedCtl) == 0) {
+        return true;
+    } else  {
+        cerr << __PRETTY_FUNCTION__ << " VIDIOC_S_CTRL " << errno << strerror(errno) << endl;
+        return false;
+    }
 }
 
 
@@ -622,6 +645,10 @@ bool CaptureDevice::queryControl(struct v4l2_queryctrl& ctl) const
     if (xioctl(m_fileDescriptor, VIDIOC_QUERYCTRL, &ctl) == 0) {
         ret = true;
     } else if (errno == EINVAL) {
+        /* invalid ids are anticipated */
+        ret = false;
+    } else {
+        cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYCTRL " << errno << strerror(errno) << endl;
         ret = false;
     }
 
