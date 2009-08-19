@@ -32,8 +32,12 @@ int main(int argc, char **args)
     bool initialized = camera1.init("/dev/video0", V4L2_PIX_FMT_RGB24, 352, 288);
     assert(initialized);
 
+    camera1.printControls();
+
     bool initialized2 = camera2.init("/dev/video1", V4L2_PIX_FMT_RGB24, 352, 288);
     assert(initialized2);
+
+    camera2.printControls();
 
 
     MainWindow mainWindow(0, camera1, camera2);

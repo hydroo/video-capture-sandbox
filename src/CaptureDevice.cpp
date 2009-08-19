@@ -296,18 +296,57 @@ void CaptureDevice::printControls() const
     // cerr << __PRETTY_FUNCTION__ << endl;
     assert(m_fileDescriptor != -1);
 
-    struct v4l2_queryctrl ctrl;
-    memset (&ctrl, 0, sizeof(v4l2_queryctrl ));
+    pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > ctlsAndMenus = controls();
+
+    const list<struct v4l2_queryctrl>& ctls = ctlsAndMenus.first;
+    const list<struct v4l2_querymenu>& menus = ctlsAndMenus.second;
 
     cout << "Available Controls:" << endl;
-    for (__u32 id = V4L2_CID_BASE; id < V4L2_CID_LASTP1; id++) {
-        queryControl(id);
-    }
+    for (auto it = ctls.begin(); it != ctls.end(); ++it) {
 
-    cout << "Available Private Controls:" << endl;
-    for (__u32 id = V4L2_CID_PRIVATE_BASE;; ++id) {
-        /* an invalid id means we are beyond fence */
-        if (queryControl(id) == true) break;
+        cout << "  " << it->id - V4L2_CID_BASE << " \"" << it->name << "\""
+                << ((it->flags & V4L2_CTRL_FLAG_DISABLED) ? " " : " not ") << "disabled,"
+                << ((it->flags & V4L2_CTRL_FLAG_GRABBED) ? " " : " not  ") << "grabbed,"
+                << ((it->flags & V4L2_CTRL_FLAG_READ_ONLY) ? " " : " not ") << "readonly,"
+                << ((it->flags & V4L2_CTRL_FLAG_UPDATE) ? " " : " not ") << "update,"
+                << ((it->flags & V4L2_CTRL_FLAG_INACTIVE) ? " " : " not ") << "inactive,"
+                << ((it->flags & V4L2_CTRL_FLAG_SLIDER) ? " " : " not ") << "slider,";
+
+        switch (it->type) {
+        case V4L2_CTRL_TYPE_INTEGER:
+            cout << " integer type";
+            break;
+        case V4L2_CTRL_TYPE_BOOLEAN:
+            cout << " boolean type";
+            break;
+        case V4L2_CTRL_TYPE_MENU:
+            cout << " menu type";
+            break;
+        case V4L2_CTRL_TYPE_BUTTON:
+            cout << " button type";
+            break;
+        case V4L2_CTRL_TYPE_INTEGER64:
+            cout << " integer 64 type";
+            break;
+        case V4L2_CTRL_TYPE_CTRL_CLASS:
+            cout << " control class type";
+            break;
+        default:
+            assert(0);
+        }
+
+        cout << ", min " << it->minimum << ", max " << it->maximum << ", step "
+                << it->step << ", default " << it->default_value << endl;
+
+        if (!(it->flags & V4L2_CTRL_FLAG_DISABLED) && it->type == V4L2_CTRL_TYPE_MENU) {
+
+            for (auto it2 = menus.begin(); it2 != menus.end(); ++it2) {
+                if (it2->id == it->id) {
+                    cout << "  " << it2->name << endl;
+                }
+            }
+        }
+
     }
 }
 
@@ -522,69 +561,90 @@ void CaptureDevice::stopCapturing()
 }
 
 
-bool CaptureDevice::queryControl(__u32 id) const
+pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > CaptureDevice::controls() const
+{
+    pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > ret;
+
+    struct v4l2_queryctrl ctl;
+
+    /* for each control ... */
+    for (__u32 id = V4L2_CID_BASE; id < V4L2_CID_LASTP1; id++) {
+        ctl.id = id;
+        if (queryControl(ctl) == true) {
+            ret.first.push_back(ctl);
+
+            if (!(ctl.flags & V4L2_CTRL_FLAG_DISABLED) && ctl.type == V4L2_CTRL_TYPE_MENU) {
+                list<struct v4l2_querymenu> m = menus(ctl);
+                ret.second.insert(ret.second.end(),m.begin(),m.end());
+            }
+        }
+    }
+
+    /* for each private control ... */
+    for (__u32 id = V4L2_CID_PRIVATE_BASE;; ++id) {
+        ctl.id = id;
+        if (queryControl(ctl) == true) {
+            ret.first.push_back(ctl);
+            if (!(ctl.flags & V4L2_CTRL_FLAG_DISABLED) && ctl.type == V4L2_CTRL_TYPE_MENU) {
+                list<struct v4l2_querymenu> m = menus(ctl);
+                ret.second.insert(ret.second.end(),m.begin(),m.end());
+            }
+        } else {
+            break;
+        }
+    }
+
+    return ret;
+}
+
+
+void CaptureDevice::control(struct v4l2_control&) const
+{
+    // TODO 
+}
+
+
+void CaptureDevice::setControl(const struct v4l2_control&)
+{
+    // TODO 
+}
+
+
+bool CaptureDevice::queryControl(struct v4l2_queryctrl& ctl) const
 {
     bool ret = false;
-    struct v4l2_queryctrl ctrl;
-    memset (&ctrl, 0, sizeof(v4l2_queryctrl ));
-    ctrl.id = id;
 
-    if (xioctl(m_fileDescriptor, VIDIOC_QUERYCTRL, &ctrl) == 0) {
+    /* clear the incomming structure - better save than sorry */
+    __u32 id = ctl.id;
+    memset (&ctl, 0, sizeof(v4l2_queryctrl));
+    ctl.id = id;
 
-        cout << "  " << ctrl.id - V4L2_CID_BASE << " \"" << ctrl.name << "\""
-                << ((ctrl.flags & V4L2_CTRL_FLAG_DISABLED) ? " " : " not ") << "disabled,"
-                << ((ctrl.flags & V4L2_CTRL_FLAG_GRABBED) ? " " : " not  ") << "grabbed,"
-                << ((ctrl.flags & V4L2_CTRL_FLAG_READ_ONLY) ? " " : " not ") << "readonly,"
-                << ((ctrl.flags & V4L2_CTRL_FLAG_UPDATE) ? " " : " not ") << "update,"
-                << ((ctrl.flags & V4L2_CTRL_FLAG_INACTIVE) ? " " : " not ") << "inactive,"
-                << ((ctrl.flags & V4L2_CTRL_FLAG_SLIDER) ? " " : " not ") << "slider,";
-
-        switch (ctrl.type) {
-        case V4L2_CTRL_TYPE_INTEGER:
-            cout << " integer type";
-            break;
-        case V4L2_CTRL_TYPE_BOOLEAN:
-            cout << " boolean type";
-            break;
-        case V4L2_CTRL_TYPE_MENU:
-            cout << " menu type";
-            break;
-        case V4L2_CTRL_TYPE_BUTTON:
-            cout << " button type";
-            break;
-        case V4L2_CTRL_TYPE_INTEGER64:
-            cout << " integer 64 type";
-            break;
-        case V4L2_CTRL_TYPE_CTRL_CLASS:
-            cout << " control class type";
-            break;
-        default:
-            assert(0);
-        }
-
-        cout << endl;
-
-        if (!(ctrl.flags & V4L2_CTRL_FLAG_DISABLED) && ctrl.type == V4L2_CTRL_TYPE_MENU) {
-
-            struct v4l2_querymenu menu;
-            memset (&menu, 0, sizeof (v4l2_querymenu));
-            menu.id = ctrl.id;
-
-            for (menu.index = ctrl.minimum; ((__s32) menu.index) <= ctrl.maximum; menu.index++) {
-
-                if (xioctl(m_fileDescriptor, VIDIOC_QUERYMENU, &menu) == 0) {
-                    cout << "  " << menu.name << endl;
-                } else {
-                    cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYMENU " << errno << strerror(errno) << endl;
-                }
-            }
-
-        }
-
-    } else if (errno != EINVAL) {
-        cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYCTRL " << errno << strerror(errno) << endl;
-    } else if (errno == EINVAL) {
+    if (xioctl(m_fileDescriptor, VIDIOC_QUERYCTRL, &ctl) == 0) {
         ret = true;
+    } else if (errno == EINVAL) {
+        ret = false;
+    }
+
+    return ret;
+}
+
+
+list<v4l2_querymenu> CaptureDevice::menus(const struct v4l2_queryctrl& ctl) const
+{
+    list<struct v4l2_querymenu> ret;
+
+    struct v4l2_querymenu menu;
+    memset (&menu, 0, sizeof (v4l2_querymenu));
+    menu.id = ctl.id;
+
+    for (menu.index = ctl.minimum; ((__s32) menu.index) <= ctl.maximum; menu.index++) {
+
+        if (xioctl(m_fileDescriptor, VIDIOC_QUERYMENU, &menu) == 0) {
+            ret.push_back(menu);
+        } else {
+            /* this is no crucial error - just a suposed menu index, who is not anyways */
+            cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYMENU " << errno << strerror(errno) << endl;
+        }
     }
 
     return ret;

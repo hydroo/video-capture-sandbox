@@ -101,10 +101,18 @@ public:
     /** blocks until the capture thread is joined */
     void stopCapturing();
 
+    /** @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-QUERYCTRL
+        @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-QUERYMENU */
+    std::pair<std::list<struct v4l2_queryctrl>, std::list<struct v4l2_querymenu> > controls() const;
+
+    /** @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-CONTROL */
+    void control(struct v4l2_control&) const;
+    void setControl(const struct v4l2_control&);
+
 private:
 
-    /** @returns wether the id was a valid one */
-    bool queryControl(__u32 id) const;
+    bool queryControl(struct v4l2_queryctrl&) const;
+    std::list<struct v4l2_querymenu> menus(const struct v4l2_queryctrl&) const;
 
     static void captureThread(CaptureDevice* camera);
     static void determineCapturePeriodThread(double, CaptureDevice*,
