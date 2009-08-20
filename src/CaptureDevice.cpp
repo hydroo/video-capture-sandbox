@@ -311,7 +311,7 @@ void CaptureDevice::printControls() const
                 << ((it->flags & V4L2_CTRL_FLAG_READ_ONLY) ? " +" : " !") << "readonly,"
                 << ((it->flags & V4L2_CTRL_FLAG_UPDATE) ? " +" : " !") << "update,"
                 << ((it->flags & V4L2_CTRL_FLAG_INACTIVE) ? " +" : " !") << "inactive,"
-                << ((it->flags & V4L2_CTRL_FLAG_SLIDER) ? " +" : " !") << "slider,";
+                /*<< ((it->flags & V4L2_CTRL_FLAG_SLIDER) ? " +" : " !") << "slider,"*/;
 
         switch (it->type) {
         case V4L2_CTRL_TYPE_INTEGER:
@@ -605,7 +605,6 @@ bool CaptureDevice::control(struct v4l2_control& ctl) const
         http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#VIDIOC-G-CTRL */
 
     if (xioctl(m_fileDescriptor, VIDIOC_G_CTRL, &ctl) == 0) {
-        ctl.value += 1; // w00t is this? copied from the v4l docs TODO find out if this is right (set->get -> !)
 
         /* v4l-copied: The driver may clamp the value or return ERANGE, ignored here */
 

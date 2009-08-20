@@ -15,7 +15,6 @@
 #include <QtDebug>
 #include <QVBoxLayout>
 #include <thread>
-#include "CaptureDevice.hpp"
 
 using namespace std;
 
@@ -112,6 +111,52 @@ void MainWindow::startStopButtonClicked(bool checked)
 }
 
 
+void MainWindow::sliderControlValueChanged(int value)
+{
+    if (m_senderWidgetToControl.contains(sender()) == false) return;
+
+    v4l2_control control;
+    control.id = m_senderWidgetToControl[sender()].first;
+    control.value = value;
+    m_senderWidgetToControl[sender()].second->setControl(control);
+}
+
+
+void MainWindow::checkBoxControlStateChanged(int state)
+{
+    if (m_senderWidgetToControl.contains(sender()) == false) return;
+
+    assert(state == Qt::Unchecked || state == Qt::Checked);
+
+    v4l2_control control;
+    control.id = m_senderWidgetToControl[sender()].first;
+    control.value = state == Qt::Unchecked ? 0 : 1;
+    m_senderWidgetToControl[sender()].second->setControl(control);
+}
+
+
+void MainWindow::comboBoxControlIndexChanged (int index)
+{
+    if (m_senderWidgetToControl.contains(sender()) == false) return;
+
+    v4l2_control control;
+    control.id = m_senderWidgetToControl[sender()].first;
+    control.value = qobject_cast<QComboBox*>(sender())->itemData(index).toInt();
+
+    m_senderWidgetToControl[sender()].second->setControl(control);
+}
+
+
+void MainWindow::buttonControlClicked(bool checked)
+{
+    Q_UNUSED(checked);
+    if (m_senderWidgetToControl.contains(sender()) == false) return;
+
+
+    // TODO
+}
+
+
 void MainWindow::startPaintThread()
 {
     assert(m_paintThread == 0);
@@ -134,7 +179,7 @@ void MainWindow::stopPaintThread()
 }
 
 
-void MainWindow::createCaptureDeviceControlWidgets(const CaptureDevice& camera, QWidget *widgetWhereToAddControlsTo)
+void MainWindow::createCaptureDeviceControlWidgets(CaptureDevice& camera, QWidget *widgetWhereToAddControlsTo)
 {
     const pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > cameraControls = camera.controls();
     const list<struct v4l2_queryctrl>& controls = cameraControls.first;
@@ -147,25 +192,46 @@ void MainWindow::createCaptureDeviceControlWidgets(const CaptureDevice& camera, 
         QWidget *controlLabel;
         string controlName = it->name != 0 ? string((const char*) it->name) : string("n/a");
 
+        struct v4l2_control currentValue;
+        currentValue.id = it->id;
+        if (camera.control(currentValue) == true) {
+            /* currentValue->value = xxx */
+        } else {
+            cerr << __PRETTY_FUNCTION__ << "error getting control value. Using default." << endl;
+            currentValue.value = it->default_value;
+        }
+        
+
+        qDebug() << &camera << controlName.c_str() << "min" << it->minimum << "max" << it->maximum << "cur"
+                << currentValue.value << "default" << it->default_value;
+
         switch (it->type) {
         case V4L2_CTRL_TYPE_INTEGER: {
             controlLabel = new QLabel(controlName.c_str(), widgetWhereToAddControlsTo);
             QSlider *widget = new QSlider(Qt::Horizontal, widgetWhereToAddControlsTo);
-            controlWidget = qobject_cast<QWidget*>(widget);
-
+            connect(widget, SIGNAL(valueChanged(int)), this, SLOT(sliderControlValueChanged(int)));
+            widget->setTracking(false);
+            widget->setSingleStep(1);
             widget->setMaximum(it->minimum);
             widget->setMinimum(it->maximum);
+            widget->setValue(currentValue.value);
+
+            controlWidget = qobject_cast<QWidget*>(widget);
             break; }
         case V4L2_CTRL_TYPE_BOOLEAN: {
             controlLabel = 0;
             QCheckBox *widget = new QCheckBox(controlName.c_str(), widgetWhereToAddControlsTo);
+            connect(widget, SIGNAL(stateChanged(int)), this, SLOT(checkBoxControlStateChanged(int)));
+            widget->setCheckState(currentValue.value == 0 ? Qt::Unchecked : Qt::Checked);
+
             controlWidget = qobject_cast<QWidget*>(widget);
             break; }
         case V4L2_CTRL_TYPE_MENU: { /* never tested this - ronny 090820 */
             controlLabel = new QLabel(controlName.c_str(), widgetWhereToAddControlsTo);
             QComboBox *widget = new QComboBox(widgetWhereToAddControlsTo);
-            controlWidget = qobject_cast<QWidget*>(widget);
+            connect(widget, SIGNAL(currentIndexChanged(int)), this, SLOT(comboBoxControlIndexChanged(int)));
 
+            /* fill the combo box */
             for (auto itMenu = menuItems.begin(); itMenu != menuItems.end(); ++itMenu) {
                 if (itMenu->id == it->id) {
                     string menuItemName = itMenu->name != 0 ? string((const char*) itMenu->name) : string("n/a");
@@ -174,11 +240,24 @@ void MainWindow::createCaptureDeviceControlWidgets(const CaptureDevice& camera, 
                 }
             }
 
+            /* select the current item */
+            int a;
+            for (a = 0; a < widget->count(); ++a) {
+                if (widget->itemData(a).toInt() == currentValue.value) {
+                    widget->setCurrentIndex(a);
+                    break;
+                }
+            }
+            assert(a < widget->count());
+
+            controlWidget = qobject_cast<QWidget*>(widget);
             break; }
-        case V4L2_CTRL_TYPE_BUTTON:
-            controlLabel = new QLabel(controlName.c_str(), widgetWhereToAddControlsTo);
-            controlWidget = qobject_cast<QWidget*>(new QLabel("V4L2_CTRL_TYPE_BUTTON", widgetWhereToAddControlsTo));
-            break;
+        case V4L2_CTRL_TYPE_BUTTON: { /* never tested this - ronny 090820 */
+            controlLabel = 0;
+            QPushButton *widget = new QPushButton(controlName.c_str(), widgetWhereToAddControlsTo);
+            connect(widget, SIGNAL(clicked(bool)), this, SLOT(buttonControlClicked(bool)));
+            controlWidget = qobject_cast<QWidget*>(widget);
+            break; }
         case V4L2_CTRL_TYPE_INTEGER64:
             controlLabel = new QLabel(controlName.c_str(), widgetWhereToAddControlsTo);
             controlWidget = qobject_cast<QWidget*>(new QLabel("V4L2_CTRL_TYPE_INTEGER64", widgetWhereToAddControlsTo));
@@ -199,6 +278,8 @@ void MainWindow::createCaptureDeviceControlWidgets(const CaptureDevice& camera, 
         }
 
         if (controlWidget != 0) {
+            m_senderWidgetToControl.insert(qobject_cast<QObject*>(controlWidget),
+                    QPair<__u32, CaptureDevice*>(it->id, &camera));
             controlLayout->addWidget(controlWidget);
         }
 

@@ -5,8 +5,10 @@
 #include "Prereqs.hpp"
 
 #include <mutex>
+#include <QMap>
 #include <QMainWindow>
 #include <QImage>
+#include "CaptureDevice.hpp"
 
 class QGroupBox;
 class QHBoxLayout;
@@ -36,16 +38,20 @@ protected:
     virtual void closeEvent(QCloseEvent *event);
     virtual void paintEvent(QPaintEvent *event);
 
-protected slots:
+private slots:
 
     void startStopButtonClicked(bool checked);
+    void sliderControlValueChanged(int value);
+    void checkBoxControlStateChanged(int state);
+    void comboBoxControlIndexChanged (int index);
+    void buttonControlClicked(bool checked);
 
 private:
 
     void startPaintThread();
     void stopPaintThread();
 
-    void createCaptureDeviceControlWidgets(const CaptureDevice& camera, QWidget *widgetWhereToAddControlsTo);
+    void createCaptureDeviceControlWidgets(CaptureDevice& camera, QWidget *widgetWhereToAddControlsTo);
 
     static void paintThread(MainWindow* window);
 
@@ -61,6 +67,8 @@ private:
         QVBoxLayout *m_camera2Layout;
         QLabel *m_camera2ImageLabel;
         QPushButton *m_camera2StartStopButton;
+
+    QMap<QObject*, QPair<__u32, CaptureDevice*> > m_senderWidgetToControl;
 
     CaptureDevice& m_camera1;
     CaptureDevice& m_camera2;
