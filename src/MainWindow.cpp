@@ -53,6 +53,9 @@ MainWindow::MainWindow(QWidget *parent, CaptureDevice& camera1, CaptureDevice& c
     m_mainLayout->addLayout(m_globalButtonsLayout);
     m_centralWidget->setLayout(m_mainLayout);
     setCentralWidget(m_centralWidget);
+
+    createCaptureDeviceControlWidgets(m_camera1, qobject_cast<QLayout*>(m_camera1Layout));
+    createCaptureDeviceControlWidgets(m_camera2, qobject_cast<QLayout*>(m_camera2Layout));
 }
 
 
@@ -103,6 +106,34 @@ void MainWindow::startStopButtonClicked(bool checked)
         m_camera1.stopCapturing();
         m_camera2.stopCapturing();
     }
+}
+
+
+void MainWindow::startPaintThread()
+{
+    assert(m_paintThread == 0);
+    m_paintThread = new std::thread(bind(paintThread, this));
+}
+
+
+void MainWindow::stopPaintThread()
+{
+    if (m_paintThread != 0) {
+        assert(m_paintThread->joinable() == true);
+
+        m_paintThreadCancellationFlag = true;
+        m_paintThread->join();
+        m_paintThreadCancellationFlag = false;
+
+        delete m_paintThread;
+        m_paintThread = 0;
+    }
+}
+
+
+void MainWindow::createCaptureDeviceControlWidgets(const CaptureDevice& camera, QLayout *layoutWhereToAddWidgetsTo)
+{
+    
 }
 
 
@@ -179,25 +210,4 @@ void MainWindow::paintThread(MainWindow *window)
     }
 }
 
-
-void MainWindow::startPaintThread()
-{
-    assert(m_paintThread == 0);
-    m_paintThread = new std::thread(bind(paintThread, this));
-}
-
-
-void MainWindow::stopPaintThread()
-{
-    if (m_paintThread != 0) {
-        assert(m_paintThread->joinable() == true);
-
-        m_paintThreadCancellationFlag = true;
-        m_paintThread->join();
-        m_paintThreadCancellationFlag = false;
-
-        delete m_paintThread;
-        m_paintThread = 0;
-    }
-}
 

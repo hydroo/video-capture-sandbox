@@ -45,6 +45,8 @@ private:
     void startPaintThread();
     void stopPaintThread();
 
+    void createCaptureDeviceControlWidgets(const CaptureDevice& camera, QLayout *layoutWhereToAddWidgetsTo);
+
     static void paintThread(MainWindow* window);
 
     QHBoxLayout *m_mainLayout;
