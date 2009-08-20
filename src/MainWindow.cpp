@@ -3,12 +3,15 @@
 #include <cassert>
 #include <functional>
 #include <iostream>
+#include <QCheckBox>
+#include <QComboBox>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPushButton>
+#include <QSlider>
 #include <QtDebug>
 #include <QVBoxLayout>
 #include <thread>
@@ -54,8 +57,8 @@ MainWindow::MainWindow(QWidget *parent, CaptureDevice& camera1, CaptureDevice& c
     m_centralWidget->setLayout(m_mainLayout);
     setCentralWidget(m_centralWidget);
 
-    createCaptureDeviceControlWidgets(m_camera1, qobject_cast<QLayout*>(m_camera1Layout));
-    createCaptureDeviceControlWidgets(m_camera2, qobject_cast<QLayout*>(m_camera2Layout));
+    createCaptureDeviceControlWidgets(m_camera1, qobject_cast<QWidget*>(m_camera1GroupBox));
+    createCaptureDeviceControlWidgets(m_camera2, qobject_cast<QWidget*>(m_camera2GroupBox));
 }
 
 
@@ -131,9 +134,76 @@ void MainWindow::stopPaintThread()
 }
 
 
-void MainWindow::createCaptureDeviceControlWidgets(const CaptureDevice& camera, QLayout *layoutWhereToAddWidgetsTo)
+void MainWindow::createCaptureDeviceControlWidgets(const CaptureDevice& camera, QWidget *widgetWhereToAddControlsTo)
 {
-    
+    const pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > cameraControls = camera.controls();
+    const list<struct v4l2_queryctrl>& controls = cameraControls.first;
+    const list<struct v4l2_querymenu>& menuItems = cameraControls.second;
+
+
+    for (auto it = controls.begin(); it != controls.end(); ++it) {
+
+        QWidget *controlWidget;
+        QWidget *controlLabel;
+        string controlName = it->name != 0 ? string((const char*) it->name) : string("n/a");
+
+        switch (it->type) {
+        case V4L2_CTRL_TYPE_INTEGER: {
+            controlLabel = new QLabel(controlName.c_str(), widgetWhereToAddControlsTo);
+            QSlider *widget = new QSlider(Qt::Horizontal, widgetWhereToAddControlsTo);
+            controlWidget = qobject_cast<QWidget*>(widget);
+
+            widget->setMaximum(it->minimum);
+            widget->setMinimum(it->maximum);
+            break; }
+        case V4L2_CTRL_TYPE_BOOLEAN: {
+            controlLabel = 0;
+            QCheckBox *widget = new QCheckBox(controlName.c_str(), widgetWhereToAddControlsTo);
+            controlWidget = qobject_cast<QWidget*>(widget);
+            break; }
+        case V4L2_CTRL_TYPE_MENU: { /* never tested this - ronny 090820 */
+            controlLabel = new QLabel(controlName.c_str(), widgetWhereToAddControlsTo);
+            QComboBox *widget = new QComboBox(widgetWhereToAddControlsTo);
+            controlWidget = qobject_cast<QWidget*>(widget);
+
+            for (auto itMenu = menuItems.begin(); itMenu != menuItems.end(); ++itMenu) {
+                if (itMenu->id == it->id) {
+                    string menuItemName = itMenu->name != 0 ? string((const char*) itMenu->name) : string("n/a");
+                    /* userData contains the index to be used for ioctl calls */
+                    widget->addItem(menuItemName.c_str(), QVariant(itMenu->index));
+                }
+            }
+
+            break; }
+        case V4L2_CTRL_TYPE_BUTTON:
+            controlLabel = new QLabel(controlName.c_str(), widgetWhereToAddControlsTo);
+            controlWidget = qobject_cast<QWidget*>(new QLabel("V4L2_CTRL_TYPE_BUTTON", widgetWhereToAddControlsTo));
+            break;
+        case V4L2_CTRL_TYPE_INTEGER64:
+            controlLabel = new QLabel(controlName.c_str(), widgetWhereToAddControlsTo);
+            controlWidget = qobject_cast<QWidget*>(new QLabel("V4L2_CTRL_TYPE_INTEGER64", widgetWhereToAddControlsTo));
+            break;
+        case V4L2_CTRL_TYPE_CTRL_CLASS:
+            controlLabel = new QLabel(controlName.c_str(), widgetWhereToAddControlsTo);
+            controlWidget = qobject_cast<QWidget*>(new QLabel("V4L2_CTRL_TYPE_CTRL_CLASS", widgetWhereToAddControlsTo));
+            break;
+        default:
+            assert(0);
+            break;
+        }
+
+        QHBoxLayout *controlLayout = new QHBoxLayout();
+
+        if (controlLabel != 0) {
+            controlLayout->addWidget(controlLabel);
+        }
+
+        if (controlWidget != 0) {
+            controlLayout->addWidget(controlWidget);
+        }
+
+        widgetWhereToAddControlsTo->layout()->addItem(controlLayout);
+    }
 }
 
 

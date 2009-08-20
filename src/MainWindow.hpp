@@ -45,7 +45,7 @@ private:
     void startPaintThread();
     void stopPaintThread();
 
-    void createCaptureDeviceControlWidgets(const CaptureDevice& camera, QLayout *layoutWhereToAddWidgetsTo);
+    void createCaptureDeviceControlWidgets(const CaptureDevice& camera, QWidget *widgetWhereToAddControlsTo);
 
     static void paintThread(MainWindow* window);
 
