@@ -19,7 +19,6 @@
 using namespace std;
 
 
-static int xioctl(int fileDescriptor, int request, void *arg);
 
 
 CaptureDevice::CaptureDevice() :
@@ -124,7 +123,9 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
         finish(); return false;
     }
 
+    m_libv4lAccessMutex.lock();
     m_fileDescriptor = v4l2_open(m_deviceFileName.c_str(), O_RDWR|O_NONBLOCK);
+    m_libv4lAccessMutex.unlock();
 
     if (m_fileDescriptor == -1) {
         cerr << "Cannot open file. " << errno << strerror (errno) << endl;
@@ -135,7 +136,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
     /* *** initialize capturing *** */
     struct v4l2_capability cap;
 
-    if (xioctl(m_fileDescriptor, VIDIOC_QUERYCAP, &cap) == -1) {
+    if (xv4l2_ioctl(m_fileDescriptor, VIDIOC_QUERYCAP, &cap) == -1) {
         if (EINVAL == errno) {
             cerr << "File is no V4L2 device." << endl;
             finish(); return false;
@@ -161,11 +162,11 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
     memset(&cropcap, 0, sizeof(v4l2_cropcap));
 
     cropcap.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    xioctl(m_fileDescriptor, VIDIOC_CROPCAP, &cropcap); /* ignore errors */
+    xv4l2_ioctl(m_fileDescriptor, VIDIOC_CROPCAP, &cropcap); /* ignore errors */
 
     crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     crop.c = cropcap.defrect;
-    xioctl(m_fileDescriptor, VIDIOC_S_CROP, &crop); /* ignore errors */
+    xv4l2_ioctl(m_fileDescriptor, VIDIOC_S_CROP, &crop); /* ignore errors */
 
 
     struct v4l2_format fmt;
@@ -177,7 +178,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
     fmt.fmt.pix.pixelformat = m_pixelFormat;
     fmt.fmt.pix.field = m_fieldFormat;
 
-    if (xioctl(m_fileDescriptor, VIDIOC_S_FMT, &fmt) == -1) {
+    if (xv4l2_ioctl(m_fileDescriptor, VIDIOC_S_FMT, &fmt) == -1) {
         cerr << __PRETTY_FUNCTION__ << " VIDIOC_S_FMT " << errno << strerror(errno) << endl;
         finish(); return false;
     }
@@ -237,7 +238,10 @@ void CaptureDevice::finish()
 
     /* *** close device *** */
     if (m_fileDescriptor != -1) {
-        if (v4l2_close(m_fileDescriptor) == -1) {
+        m_libv4lAccessMutex.lock();
+        int ret = v4l2_close(m_fileDescriptor);
+        m_libv4lAccessMutex.unlock();
+        if (ret == -1) {
             cerr << __PRETTY_FUNCTION__ << "Could not close device file. " << errno << " " << strerror(errno) << endl;
         }
         m_fileDescriptor = -1;
@@ -256,14 +260,14 @@ void CaptureDevice::finish()
 }
 
 
-void CaptureDevice::printDeviceInfo() const
+void CaptureDevice::printDeviceInfo()
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
     assert(m_fileDescriptor != -1);
 
 	struct v4l2_capability cap;
 	/* check capabilities */
-	if (xioctl(m_fileDescriptor, VIDIOC_QUERYCAP, &cap) == -1) {
+	if (xv4l2_ioctl(m_fileDescriptor, VIDIOC_QUERYCAP, &cap) == -1) {
         if (EINVAL == errno) {
             cerr << "Device is no V4L2 device." << endl;
             assert(0);
@@ -292,7 +296,7 @@ void CaptureDevice::printDeviceInfo() const
 }
 
 
-void CaptureDevice::printControls() const
+void CaptureDevice::printControls()
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
     assert(m_fileDescriptor != -1);
@@ -352,7 +356,7 @@ void CaptureDevice::printControls() const
 }
 
 
-void CaptureDevice::printFormats() const
+void CaptureDevice::printFormats()
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
     assert(m_fileDescriptor != -1);
@@ -434,7 +438,7 @@ void CaptureDevice::printFormats() const
         format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		format.index = formatIndex;
 
-		ioctlError = ioctl (m_fileDescriptor, VIDIOC_ENUM_FMT, &format);
+		ioctlError = xv4l2_ioctl (m_fileDescriptor, VIDIOC_ENUM_FMT, &format);
 
 		if (ioctlError == 0) {
 			for (int a = 0; a < formatCount; ++a) {
@@ -562,7 +566,7 @@ void CaptureDevice::stopCapturing()
 }
 
 
-pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > CaptureDevice::controls() const
+pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > CaptureDevice::controls()
 {
     pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > ret;
 
@@ -599,12 +603,12 @@ pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > CaptureDevice::c
 }
 
 
-bool CaptureDevice::control(struct v4l2_control& ctl) const
+bool CaptureDevice::control(struct v4l2_control& ctl)
 {
     /* which errors VIDIOC_G_CTRL can throw:
         http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#VIDIOC-G-CTRL */
 
-    if (xioctl(m_fileDescriptor, VIDIOC_G_CTRL, &ctl) == 0) {
+    if (xv4l2_ioctl(m_fileDescriptor, VIDIOC_G_CTRL, &ctl) == 0) {
 
         /* v4l-copied: The driver may clamp the value or return ERANGE, ignored here */
 
@@ -623,7 +627,7 @@ bool CaptureDevice::setControl(const struct v4l2_control& ctl)
     /* which errors VIDIOC_S_CTRL can throw:
         http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#VIDIOC-G-CTRL */
 
-    if (xioctl(m_fileDescriptor, VIDIOC_S_CTRL, &copiedCtl) == 0) {
+    if (xv4l2_ioctl(m_fileDescriptor, VIDIOC_S_CTRL, &copiedCtl) == 0) {
         return true;
     } else  {
         cerr << __PRETTY_FUNCTION__ << " VIDIOC_S_CTRL " << errno << strerror(errno) << endl;
@@ -632,7 +636,7 @@ bool CaptureDevice::setControl(const struct v4l2_control& ctl)
 }
 
 
-bool CaptureDevice::queryControl(struct v4l2_queryctrl& ctl) const
+bool CaptureDevice::queryControl(struct v4l2_queryctrl& ctl)
 {
     bool ret = false;
 
@@ -641,7 +645,7 @@ bool CaptureDevice::queryControl(struct v4l2_queryctrl& ctl) const
     memset (&ctl, 0, sizeof(v4l2_queryctrl));
     ctl.id = id;
 
-    if (xioctl(m_fileDescriptor, VIDIOC_QUERYCTRL, &ctl) == 0) {
+    if (xv4l2_ioctl(m_fileDescriptor, VIDIOC_QUERYCTRL, &ctl) == 0) {
         ret = true;
     } else if (errno == EINVAL) {
         /* invalid ids are anticipated */
@@ -655,7 +659,7 @@ bool CaptureDevice::queryControl(struct v4l2_queryctrl& ctl) const
 }
 
 
-list<v4l2_querymenu> CaptureDevice::menus(const struct v4l2_queryctrl& ctl) const
+list<v4l2_querymenu> CaptureDevice::menus(const struct v4l2_queryctrl& ctl)
 {
     list<struct v4l2_querymenu> ret;
 
@@ -665,7 +669,7 @@ list<v4l2_querymenu> CaptureDevice::menus(const struct v4l2_queryctrl& ctl) cons
 
     for (menu.index = ctl.minimum; ((__s32) menu.index) <= ctl.maximum; menu.index++) {
 
-        if (xioctl(m_fileDescriptor, VIDIOC_QUERYMENU, &menu) == 0) {
+        if (xv4l2_ioctl(m_fileDescriptor, VIDIOC_QUERYMENU, &menu) == 0) {
             ret.push_back(menu);
         } else {
             /* this is no crucial error - just a suposed menu index, who is not anyways */
@@ -685,6 +689,7 @@ void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
     unsigned int bufferSize = camera->m_bufferSize;
     clockid_t clockId = camera->m_timerClockId;
     void *buffer = malloc(camera->m_bufferSize);
+    std::mutex& libv4lAccessMutex = camera->m_libv4lAccessMutex;
     fd_set filedescriptorset;
     struct timeval tv;
     int sel;
@@ -717,7 +722,9 @@ void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
         }
 
         /* read from the device */
+        libv4lAccessMutex.lock();
         readlen = v4l2_read(fileDescriptor, buffer, bufferSize);
+        libv4lAccessMutex.unlock();
 
         if (readlen == -1) {
             cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << strerror(errno) << endl;
@@ -762,6 +769,7 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
     clockid_t clockId = camera->m_timerClockId;
     std::deque<Buffer*>& sortedBuffers = camera->m_timelySortedBuffers;
     std::mutex& sortedBuffersMutex =  camera->m_timelySortedBuffersMutex;
+    std::mutex& libv4lAccessMutex = camera->m_libv4lAccessMutex;
     fd_set filedescriptorset;
     struct timeval tv;
     int sel;
@@ -772,18 +780,20 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
 
         FD_ZERO(&filedescriptorset);
         FD_SET(fileDescriptor, &filedescriptorset);
-        tv.tv_sec = 2;
+        tv.tv_sec = 1;
         tv.tv_usec = 0;
 
         /* watch the file handle for new readable data */
+        libv4lAccessMutex.lock();
         sel = select(fileDescriptor + 1, &filedescriptorset, NULL, NULL, &tv);
+        libv4lAccessMutex.unlock();
 
         if (sel == -1 && errno != EINTR) {
             cerr << __PRETTY_FUNCTION__ << " Select error. " << errno << strerror(errno) << endl;
-            abort();
-        } else if (sel == 0) {
-            cerr << __PRETTY_FUNCTION__ << " Select timeout. " << errno << strerror(errno) << endl;
             assert(0);
+        } else if (sel == 0) {
+            /* select timeout */
+            continue;
         }
 
         /* remove the last element if possible */
@@ -801,7 +811,9 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
 
         /* read from the device into the buffer */
         clock_gettime(clockId, &(buffer->time));
+        libv4lAccessMutex.lock();
         readlen = v4l2_read(fileDescriptor, buffer->buffer, bufferSize);
+        libv4lAccessMutex.unlock();
 
         if (readlen == -1) {
             cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << strerror(errno) << endl;
@@ -824,12 +836,16 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
 
 
 /** helper, which calls ioctl until an undisturbed call has been done */
-int xioctl(int fileDescriptor, int request, void *arg)
+int CaptureDevice::xv4l2_ioctl(int fileDescriptor, int request, void *arg)
 {
     int r;
 
+    m_libv4lAccessMutex.lock();
+
     do r = v4l2_ioctl (fileDescriptor, request, arg);
     while (-1 == r && EINTR == errno);
+    
+    m_libv4lAccessMutex.unlock();
 
     return r;
 }

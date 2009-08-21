@@ -68,9 +68,9 @@ public:
 
     void finish();
 
-    void printDeviceInfo() const;
-    void printControls() const;
-    void printFormats() const;
+    void printDeviceInfo();
+    void printControls();
+    void printFormats();
     void printTimerInformation() const;
 
     struct Buffer
@@ -103,22 +103,24 @@ public:
 
     /** @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-QUERYCTRL
         @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-QUERYMENU */
-    std::pair<std::list<struct v4l2_queryctrl>, std::list<struct v4l2_querymenu> > controls() const;
+    std::pair<std::list<struct v4l2_queryctrl>, std::list<struct v4l2_querymenu> > controls();
 
     /** @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-CONTROL
         @returns whether the result is valid - why? -> better error checking to come */
-    bool control(struct v4l2_control&) const;
+    bool control(struct v4l2_control&);
     /** @returns whether the call succeeded - why not ? -> better error checking to come */
     bool setControl(const struct v4l2_control&);
 
 private:
 
-    bool queryControl(struct v4l2_queryctrl&) const;
-    std::list<struct v4l2_querymenu> menus(const struct v4l2_queryctrl&) const;
+    bool queryControl(struct v4l2_queryctrl&);
+    std::list<struct v4l2_querymenu> menus(const struct v4l2_queryctrl&);
 
     static void captureThread(CaptureDevice* camera);
     static void determineCapturePeriodThread(double, CaptureDevice*,
             std::pair<double,double>*);
+
+    int xv4l2_ioctl(int fileDescriptor, int request, void *arg);
 
     unsigned int m_captureHeight;
     unsigned int m_captureWidth;
@@ -140,6 +142,8 @@ private:
 
     std::thread *m_captureThread;
     bool m_captureThreadCancellationFlag;
+
+    std::mutex m_libv4lAccessMutex;
 };
 
 
