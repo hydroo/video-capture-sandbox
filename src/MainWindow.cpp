@@ -196,6 +196,8 @@ void MainWindow::sliderControlValueChanged(int value)
     if (m_senderWidgetToControl.find(sender()) == 
             m_senderWidgetToControl.end()) return;
 
+    m_senderWidgetToControl[sender()].camera->pauseCapturing(true);
+
     QWidget *senderWidget = qobject_cast<QWidget*>(sender());
     assert (senderWidget != 0);
     senderWidget->setEnabled(false);
@@ -205,6 +207,8 @@ void MainWindow::sliderControlValueChanged(int value)
     control.value = value;
     m_senderWidgetToControl[sender()].camera->setControl(control);
 
+    m_senderWidgetToControl[sender()].camera->pauseCapturing(false);
+
     senderWidget->setEnabled(true);
 }
 
@@ -213,6 +217,8 @@ void MainWindow::checkBoxControlStateChanged(int state)
 {
     if (m_senderWidgetToControl.find(sender()) == 
             m_senderWidgetToControl.end()) return;
+
+    m_senderWidgetToControl[sender()].camera->pauseCapturing(true);
 
     assert(state == Qt::Unchecked || state == Qt::Checked);
 
@@ -225,6 +231,8 @@ void MainWindow::checkBoxControlStateChanged(int state)
     control.value = state == Qt::Unchecked ? 0 : 1;
     m_senderWidgetToControl[sender()].camera->setControl(control);
 
+    m_senderWidgetToControl[sender()].camera->pauseCapturing(false);
+
     senderWidget->setEnabled(true);
 }
 
@@ -233,6 +241,8 @@ void MainWindow::comboBoxControlIndexChanged (int index)
 {
     if (m_senderWidgetToControl.find(sender()) == 
             m_senderWidgetToControl.end()) return;
+
+    m_senderWidgetToControl[sender()].camera->pauseCapturing(true);
 
     QWidget *senderWidget = qobject_cast<QWidget*>(sender());
     assert (senderWidget != 0);
@@ -243,6 +253,8 @@ void MainWindow::comboBoxControlIndexChanged (int index)
     control.value = qobject_cast<QComboBox*>(sender())->itemData(index).toInt();
 
     m_senderWidgetToControl[sender()].camera->setControl(control);
+
+    m_senderWidgetToControl[sender()].camera->pauseCapturing(false);
 
     senderWidget->setEnabled(true);
 }
