@@ -123,9 +123,9 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
         finish(); return false;
     }
 
-    m_libv4lAccessMutex.lock();
+    m_fileAccessMutex.lock();
     m_fileDescriptor = v4l2_open(m_deviceFileName.c_str(), O_RDWR|O_NONBLOCK);
-    m_libv4lAccessMutex.unlock();
+    m_fileAccessMutex.unlock();
 
     if (m_fileDescriptor == -1) {
         cerr << "Cannot open file. " << errno << strerror (errno) << endl;
@@ -238,9 +238,9 @@ void CaptureDevice::finish()
 
     /* *** close device *** */
     if (m_fileDescriptor != -1) {
-        m_libv4lAccessMutex.lock();
+        m_fileAccessMutex.lock();
         int ret = v4l2_close(m_fileDescriptor);
-        m_libv4lAccessMutex.unlock();
+        m_fileAccessMutex.unlock();
         if (ret == -1) {
             cerr << __PRETTY_FUNCTION__ << "Could not close device file. " << errno << " " << strerror(errno) << endl;
         }
@@ -438,9 +438,9 @@ void CaptureDevice::printFormats()
         format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		format.index = formatIndex;
 
-		m_libv4lAccessMutex.lock();
+		m_fileAccessMutex.lock();
         ioctlError = ioctl(m_fileDescriptor, VIDIOC_ENUM_FMT, &format);
-        m_libv4lAccessMutex.unlock();
+        m_fileAccessMutex.unlock();
 
 		if (ioctlError == 0) {
 			for (int a = 0; a < formatCount; ++a) {
@@ -691,7 +691,7 @@ void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
     unsigned int bufferSize = camera->m_bufferSize;
     clockid_t clockId = camera->m_timerClockId;
     void *buffer = malloc(camera->m_bufferSize);
-    std::mutex& libv4lAccessMutex = camera->m_libv4lAccessMutex;
+    std::mutex& fileAccessMutex = camera->m_fileAccessMutex;
     fd_set filedescriptorset;
     struct timeval tv;
     int sel;
@@ -724,9 +724,9 @@ void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
         }
 
         /* read from the device */
-        libv4lAccessMutex.lock();
+        fileAccessMutex.lock();
         readlen = v4l2_read(fileDescriptor, buffer, bufferSize);
-        libv4lAccessMutex.unlock();
+        fileAccessMutex.unlock();
 
         if (readlen == -1) {
             cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << strerror(errno) << endl;
@@ -771,7 +771,7 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
     clockid_t clockId = camera->m_timerClockId;
     std::deque<Buffer*>& sortedBuffers = camera->m_timelySortedBuffers;
     std::mutex& sortedBuffersMutex =  camera->m_timelySortedBuffersMutex;
-    std::mutex& libv4lAccessMutex = camera->m_libv4lAccessMutex;
+    std::mutex& fileAccessMutex = camera->m_fileAccessMutex;
     fd_set filedescriptorset;
     struct timeval tv;
     int sel;
@@ -786,9 +786,9 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
         tv.tv_usec = 0;
 
         /* watch the file handle for new readable data */
-        libv4lAccessMutex.lock();
+        fileAccessMutex.lock();
         sel = select(fileDescriptor + 1, &filedescriptorset, NULL, NULL, &tv);
-        libv4lAccessMutex.unlock();
+        fileAccessMutex.unlock();
 
         if (sel == -1 && errno != EINTR) {
             cerr << __PRETTY_FUNCTION__ << " Select error. " << errno << strerror(errno) << endl;
@@ -813,9 +813,9 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
 
         /* read from the device into the buffer */
         clock_gettime(clockId, &(buffer->time));
-        libv4lAccessMutex.lock();
+        fileAccessMutex.lock();
         readlen = v4l2_read(fileDescriptor, buffer->buffer, bufferSize);
-        libv4lAccessMutex.unlock();
+        fileAccessMutex.unlock();
 
         if (readlen == -1) {
             cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << strerror(errno) << endl;
@@ -842,12 +842,12 @@ int CaptureDevice::xv4l2_ioctl(int fileDescriptor, int request, void *arg)
 {
     int r;
 
-    m_libv4lAccessMutex.lock();
+    m_fileAccessMutex.lock();
 
     do r = v4l2_ioctl (fileDescriptor, request, arg);
     while (-1 == r && EINTR == errno);
     
-    m_libv4lAccessMutex.unlock();
+    m_fileAccessMutex.unlock();
 
     return r;
 }

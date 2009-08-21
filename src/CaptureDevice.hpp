@@ -143,7 +143,7 @@ private:
     std::thread *m_captureThread;
     bool m_captureThreadCancellationFlag;
 
-    std::mutex m_libv4lAccessMutex;
+    std::mutex m_fileAccessMutex;
 };
 
 
