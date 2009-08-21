@@ -104,14 +104,21 @@ void MainWindow::paintEvent(QPaintEvent *event)
 
 void MainWindow::startStopButtonClicked(bool checked)
 {
-    if (checked) {
-        m_camera1.startCapturing();
-        m_camera2.startCapturing();
-        startPaintThread();
+    if (checked == true ) {
+        if (m_camera1.isCapturing() == false) m_camera1.startCapturing();
+        else m_camera1.pauseCapturing(false);
+        if (m_camera2.isCapturing() == false) m_camera2.startCapturing();
+        else m_camera2.pauseCapturing(false);
+        if (isPainting() == false) startPaintThread();
+        else pausePaintThread(false);
     } else {
-        stopPaintThread();
-        m_camera1.stopCapturing();
-        m_camera2.stopCapturing();
+        assert(m_camera1.isCapturing() == true);
+        assert(m_camera2.isCapturing() == true);
+        assert(isPainting() == true);
+
+        pausePaintThread(true);
+        m_camera1.pauseCapturing(true);
+        m_camera2.pauseCapturing(true);
     }
 }
 
@@ -119,6 +126,13 @@ void MainWindow::startStopButtonClicked(bool checked)
 void MainWindow::updateControlValuesButtonClicked(bool checked)
 {
     Q_UNUSED(checked);
+
+    bool isCamera1Capturing = m_camera1.isCapturing();
+    bool isCamera2Capturing = m_camera2.isCapturing();
+
+
+    if (isCamera1Capturing) m_camera1.pauseCapturing(true);
+    if (isCamera2Capturing) m_camera2.pauseCapturing(true);
 
     m_updateControlValuesButton->setEnabled(false);
 
@@ -169,6 +183,9 @@ void MainWindow::updateControlValuesButtonClicked(bool checked)
             break;
         }
     }
+
+    if (isCamera1Capturing) m_camera1.pauseCapturing(false);
+    if (isCamera2Capturing) m_camera2.pauseCapturing(false);
 
     m_updateControlValuesButton->setEnabled(true);
 }
@@ -247,14 +264,14 @@ void MainWindow::buttonControlClicked(bool checked)
 
 void MainWindow::startPaintThread()
 {
-    assert(m_paintThread == 0);
+    assert(isPainting() == false);
     m_paintThread = new std::thread(bind(paintThread, this));
 }
 
 
 void MainWindow::stopPaintThread()
 {
-    if (m_paintThread != 0) {
+    if (isPainting() == true) {
         assert(m_paintThread->joinable() == true);
 
         m_paintThreadCancellationFlag = true;
@@ -263,6 +280,22 @@ void MainWindow::stopPaintThread()
 
         delete m_paintThread;
         m_paintThread = 0;
+    }
+}
+
+
+bool MainWindow::isPainting() const
+{
+    return m_paintThread != 0;
+}
+
+
+void MainWindow::pausePaintThread(bool pause)
+{
+    if (pause == true) {
+        m_pausePaintingMutex.try_lock();
+    } else {
+        m_pausePaintingMutex.unlock();
     }
 }
 
@@ -362,12 +395,16 @@ void MainWindow::paintThread(MainWindow *window)
     QImage& m_currentCamera2Image = window->m_currentCamera2Image;
     std::mutex& m_currentCamera1ImageMutex = window->m_currentCamera1ImageMutex;
     std::mutex& m_currentCamera2ImageMutex = window->m_currentCamera2ImageMutex;
+    std::mutex& pausePaintingMutex = window->m_pausePaintingMutex;
     bool &m_paintThreadCancellationFlag = window->m_paintThreadCancellationFlag;
 
     struct timespec lastPictureCamera1 = {numeric_limits<time_t>::min(), 0};
     struct timespec lastPictureCamera2 = {numeric_limits<time_t>::min(), 0};
 
     while (m_paintThreadCancellationFlag == false) {
+
+        pausePaintingMutex.lock();
+        pausePaintingMutex.unlock();
 
         bool capture1 = m_camera1.newerBuffersAvailable(lastPictureCamera1) > 0;
         bool capture2 = m_camera2.newerBuffersAvailable(lastPictureCamera2) > 0;

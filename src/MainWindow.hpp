@@ -51,6 +51,8 @@ private:
 
     void startPaintThread();
     void stopPaintThread();
+    bool isPainting() const;
+    void pausePaintThread(bool pause);
 
     void createCaptureDeviceControlWidgets(CaptureDevice& camera, QWidget *widgetWhereToAddControlsTo);
 
@@ -93,7 +95,7 @@ private:
 
     std::mutex m_currentCamera1ImageMutex;
     std::mutex m_currentCamera2ImageMutex;
-
+    std::mutex m_pausePaintingMutex;
 };
 
 

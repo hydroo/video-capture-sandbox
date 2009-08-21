@@ -597,6 +597,24 @@ void CaptureDevice::stopCapturing()
 }
 
 
+bool CaptureDevice::isCapturing() const
+{
+    return m_captureThread != 0;
+}
+
+
+void CaptureDevice::pauseCapturing(bool pause)
+{
+    if (isCapturing() == false) return;
+
+    if (pause == true ) {
+        m_pauseCapturingMutex.try_lock();
+    } else {
+        m_pauseCapturingMutex.unlock();
+    }
+}
+
+
 pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > CaptureDevice::controls()
 {
     pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > ret;
@@ -801,6 +819,7 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
     std::deque<Buffer*>& sortedBuffers = camera->m_timelySortedBuffers;
     std::mutex& sortedBuffersMutex =  camera->m_timelySortedBuffersMutex;
     std::mutex& fileAccessMutex = camera->m_fileAccessMutex;
+    std::mutex& pauseCapturingMutex = camera->m_pauseCapturingMutex;
     fd_set filedescriptorset;
     struct timeval tv;
     int sel;
@@ -808,6 +827,9 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
 
 
     while (camera->m_captureThreadCancellationFlag == false) {
+
+        pauseCapturingMutex.lock();
+        pauseCapturingMutex.unlock();
 
         FD_ZERO(&filedescriptorset);
         FD_SET(fileDescriptor, &filedescriptorset);

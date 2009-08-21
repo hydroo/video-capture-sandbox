@@ -100,6 +100,9 @@ public:
     void startCapturing();
     /** blocks until the capture thread is joined */
     void stopCapturing();
+    bool isCapturing() const;
+
+    void pauseCapturing(bool pause);
 
     /** @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-QUERYCTRL
         @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-QUERYMENU */
@@ -144,6 +147,7 @@ private:
     bool m_captureThreadCancellationFlag;
 
     std::mutex m_fileAccessMutex;
+    std::mutex m_pauseCapturingMutex;
 };
 
 
