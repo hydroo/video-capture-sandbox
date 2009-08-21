@@ -811,8 +811,8 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
 
         FD_ZERO(&filedescriptorset);
         FD_SET(fileDescriptor, &filedescriptorset);
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
+        tv.tv_sec = 0;
+        tv.tv_usec = 100000;
 
         /* watch the file handle for new readable data */
         fileAccessMutex.lock();
@@ -848,7 +848,10 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
 
         if (readlen == -1) {
             cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << strerror(errno) << endl;
-            assert(0);
+            if (errno != 11) {
+                /* ignore Resource temporarily not available errors and just try again */
+                assert(0);
+            }
         }
 
 
