@@ -426,7 +426,7 @@ void CaptureDevice::printFormats()
     int formatCount = sizeof(pixelFormats) / sizeof(FormatRecord);
     
 
-    cout << "Supported Formats: " << endl;
+    cout << "Supported Hardware Formats: " << endl;
 
 	/* ask for a pixel format enumeration */
 	int ioctlError = 0;
@@ -455,6 +455,35 @@ void CaptureDevice::printFormats()
 
         ++formatIndex;
 	}
+
+
+    cout << "Supported Software Formats: " << endl;
+
+    /* ask for a pixel format enumeration */
+    ioctlError = 0;
+    formatIndex = 0;
+
+    while (ioctlError == 0) {
+
+        struct v4l2_fmtdesc format;
+        format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        format.index = formatIndex;
+
+        ioctlError = xv4l2_ioctl(m_fileDescriptor, VIDIOC_ENUM_FMT, &format);
+
+        if (ioctlError == 0) {
+            for (int a = 0; a < formatCount; ++a) {
+                if (format.pixelformat == pixelFormats[a].id) {
+                    cout << "  " << format.description
+                            << ((format.flags & V4L2_FMT_FLAG_COMPRESSED) ? " compressed" : " raw")
+                            << " \"" << pixelFormats[a].name << "\"" << endl;
+                    break;
+                }
+            }
+        }
+
+        ++formatIndex;
+    }
 }
 
 
