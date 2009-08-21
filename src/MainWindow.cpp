@@ -202,8 +202,8 @@ void MainWindow::createCaptureDeviceControlWidgets(CaptureDevice& camera, QWidge
         }
         
 
-        qDebug() << &camera << controlName.c_str() << "min" << it->minimum << "max" << it->maximum << "cur"
-                << currentValue.value << "default" << it->default_value;
+        /* qDebug() << &camera << controlName.c_str() << "min" << it->minimum << "max" << it->maximum << "cur"
+                << currentValue.value << "default" << it->default_value; */
 
         switch (it->type) {
         case V4L2_CTRL_TYPE_INTEGER: {
@@ -212,8 +212,8 @@ void MainWindow::createCaptureDeviceControlWidgets(CaptureDevice& camera, QWidge
             connect(widget, SIGNAL(valueChanged(int)), this, SLOT(sliderControlValueChanged(int)));
             widget->setTracking(false);
             widget->setSingleStep(1);
-            widget->setMaximum(it->minimum);
-            widget->setMinimum(it->maximum);
+            widget->setMinimum(it->minimum);
+            widget->setMaximum(it->maximum);
             widget->setValue(currentValue.value);
 
             controlWidget = qobject_cast<QWidget*>(widget);
