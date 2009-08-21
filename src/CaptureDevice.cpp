@@ -438,7 +438,9 @@ void CaptureDevice::printFormats()
         format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		format.index = formatIndex;
 
-		ioctlError = xv4l2_ioctl (m_fileDescriptor, VIDIOC_ENUM_FMT, &format);
+		m_libv4lAccessMutex.lock();
+        ioctlError = ioctl(m_fileDescriptor, VIDIOC_ENUM_FMT, &format);
+        m_libv4lAccessMutex.unlock();
 
 		if (ioctlError == 0) {
 			for (int a = 0; a < formatCount; ++a) {
