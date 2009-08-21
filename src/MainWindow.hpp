@@ -41,6 +41,7 @@ protected:
 private slots:
 
     void startStopButtonClicked(bool checked);
+    void updateControlValuesButtonClicked(bool checked);
     void sliderControlValueChanged(int value);
     void checkBoxControlStateChanged(int state);
     void comboBoxControlIndexChanged (int index);
@@ -59,6 +60,7 @@ private:
     QVBoxLayout *m_globalButtonsLayout;
     QWidget *m_centralWidget;
     QPushButton *m_startStopButton;
+    QPushButton *m_updateControlValuesButton;
     QGroupBox *m_camera1GroupBox;
         QVBoxLayout *m_camera1Layout;
         QLabel *m_camera1ImageLabel;
@@ -68,7 +70,16 @@ private:
         QLabel *m_camera2ImageLabel;
         QPushButton *m_camera2StartStopButton;
 
-    QMap<QObject*, QPair<__u32, CaptureDevice*> > m_senderWidgetToControl;
+    struct ControlProperties
+    {
+        __u32 id;
+        CaptureDevice* camera;
+        enum v4l2_ctrl_type type;
+        __s32 default_value;
+    };
+
+
+    std::map<QObject*, ControlProperties> m_senderWidgetToControl;
 
     CaptureDevice& m_camera1;
     CaptureDevice& m_camera2;
