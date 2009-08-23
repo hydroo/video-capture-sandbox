@@ -65,9 +65,13 @@ private:
     QPushButton *m_updateControlValuesButton;
     QGroupBox *m_camera1GroupBox;
         QVBoxLayout *m_camera1Layout;
+        QLabel *m_camera1InfoLabel;
+        std::map<std::string,std::string> m_camera1InfoLabelContents;
         QLabel *m_camera1ImageLabel;
         QPushButton *m_camera1StartStopButton;
     QGroupBox *m_camera2GroupBox;
+        QLabel *m_camera2InfoLabel;
+        std::map<std::string,std::string> m_camera2InfoLabelContents;
         QVBoxLayout *m_camera2Layout;
         QLabel *m_camera2ImageLabel;
         QPushButton *m_camera2StartStopButton;

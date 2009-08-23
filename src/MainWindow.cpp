@@ -14,9 +14,18 @@
 #include <QSlider>
 #include <QtDebug>
 #include <QVBoxLayout>
+#include <sstream>
 #include <thread>
 
 using namespace std;
+
+
+template <typename T> static string anythingToString(T t)
+{
+    ostringstream os;
+    os << t;
+    return os.str();
+}
 
 
 MainWindow::MainWindow(QWidget *parent, CaptureDevice& camera1, CaptureDevice& camera2) :
@@ -38,17 +47,23 @@ MainWindow::MainWindow(QWidget *parent, CaptureDevice& camera1, CaptureDevice& c
     connect(m_updateControlValuesButton, SIGNAL(clicked(bool)), this, SLOT(updateControlValuesButtonClicked(bool)));
     m_camera1GroupBox = new QGroupBox(tr("Camera 1"), m_centralWidget);
         m_camera1Layout = new QVBoxLayout();
+        m_camera1Layout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+        m_camera1InfoLabel = new QLabel(m_camera1GroupBox);
         m_camera1Layout ->setAlignment(Qt::AlignLeft | Qt::AlignTop);
         m_camera1ImageLabel = new QLabel(m_camera1GroupBox);
         m_camera1ImageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     m_camera2GroupBox = new QGroupBox(tr("Camera 2"), m_centralWidget);
         m_camera2Layout = new QVBoxLayout();
+        m_camera2Layout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+        m_camera2InfoLabel = new QLabel(m_camera1GroupBox);
         m_camera2Layout ->setAlignment(Qt::AlignLeft | Qt::AlignTop);
         m_camera2ImageLabel = new QLabel(m_camera2GroupBox);
         m_camera2ImageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     m_globalButtonsLayout->addWidget(m_startStopButton);
     m_globalButtonsLayout->addWidget(m_updateControlValuesButton);
+    m_camera1Layout->addWidget(m_camera1InfoLabel);
+    m_camera2Layout->addWidget(m_camera2InfoLabel);
     m_camera1Layout->addWidget(m_camera1ImageLabel);
     m_camera2Layout->addWidget(m_camera2ImageLabel);
     m_camera1GroupBox->setLayout(m_camera1Layout);
@@ -97,6 +112,21 @@ void MainWindow::paintEvent(QPaintEvent *event)
 
     m_camera1ImageLabel->setPixmap(QPixmap::fromImage(m_currentCamera1Image));
     m_camera2ImageLabel->setPixmap(QPixmap::fromImage(m_currentCamera2Image));
+
+
+    /* update info label text */
+    ostringstream camera1LabelText;
+    for (auto it = m_camera1InfoLabelContents.begin(); it != m_camera1InfoLabelContents.end(); ++it) {
+        camera1LabelText<< it->first << " : " << it->second << endl;
+    }
+    m_camera1InfoLabel->setText(camera1LabelText.str().c_str());
+
+    ostringstream camera2LabelText;
+    for (auto it = m_camera2InfoLabelContents.begin(); it != m_camera2InfoLabelContents.end(); ++it) {
+        camera2LabelText << it->first << " : " << it->second << endl;
+    }
+    m_camera2InfoLabel->setText(camera2LabelText.str().c_str());
+
 
     QWidget::paintEvent(event);
 }
@@ -440,6 +470,9 @@ void MainWindow::paintThread(MainWindow *window)
 
             lastPictureCamera1 = buffer1->time;
 
+            window->m_camera1InfoLabelContents["s"] = anythingToString(
+                    (lastPictureCamera1.tv_sec + lastPictureCamera1.tv_nsec / 1000000000.0));
+
             m_currentCamera1ImageMutex.lock();
             m_currentCamera1Image = QImage(buffer1->buffer, m_camera1.captureSize().first,
                     m_camera1.captureSize().second, QImage::Format_RGB888);
@@ -453,6 +486,9 @@ void MainWindow::paintThread(MainWindow *window)
             buffer2 = buffers2[0];
 
             lastPictureCamera2 = buffer2->time;
+
+            window->m_camera2InfoLabelContents["s"] = anythingToString(
+                    (lastPictureCamera2.tv_sec + lastPictureCamera2.tv_nsec / 1000000000.0));
 
             m_currentCamera2ImageMutex.lock();
             m_currentCamera2Image = QImage(buffer2->buffer, m_camera2.captureSize().first,
@@ -475,5 +511,4 @@ void MainWindow::paintThread(MainWindow *window)
         } 
     }
 }
-
 
