@@ -49,14 +49,12 @@ MainWindow::MainWindow(QWidget *parent, CaptureDevice& camera1, CaptureDevice& c
         m_camera1Layout = new QVBoxLayout();
         m_camera1Layout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
         m_camera1InfoLabel = new QLabel(m_camera1GroupBox);
-        m_camera1Layout ->setAlignment(Qt::AlignLeft | Qt::AlignTop);
         m_camera1ImageLabel = new QLabel(m_camera1GroupBox);
         m_camera1ImageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     m_camera2GroupBox = new QGroupBox(tr("Camera 2"), m_centralWidget);
         m_camera2Layout = new QVBoxLayout();
         m_camera2Layout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
         m_camera2InfoLabel = new QLabel(m_camera1GroupBox);
-        m_camera2Layout ->setAlignment(Qt::AlignLeft | Qt::AlignTop);
         m_camera2ImageLabel = new QLabel(m_camera2GroupBox);
         m_camera2ImageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
