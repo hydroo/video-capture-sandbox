@@ -19,6 +19,7 @@
 #include "MainWindow.hpp"
 
 #include <cassert>
+#include <cmath>
 #include <functional>
 #include <iostream>
 #include <QCheckBox>
@@ -486,7 +487,7 @@ void MainWindow::paintThread(MainWindow *window)
 
             lastPictureCamera1 = buffer1->time;
 
-            window->m_camera1InfoLabelContents["s"] = anythingToString(
+            window->m_camera1InfoLabelContents["time"] = anythingToString(
                     (lastPictureCamera1.tv_sec + lastPictureCamera1.tv_nsec / 1000000000.0));
 
             m_currentCamera1ImageMutex.lock();
@@ -503,7 +504,7 @@ void MainWindow::paintThread(MainWindow *window)
 
             lastPictureCamera2 = buffer2->time;
 
-            window->m_camera2InfoLabelContents["s"] = anythingToString(
+            window->m_camera2InfoLabelContents["time"] = anythingToString(
                     (lastPictureCamera2.tv_sec + lastPictureCamera2.tv_nsec / 1000000000.0));
 
             m_currentCamera2ImageMutex.lock();
@@ -512,6 +513,16 @@ void MainWindow::paintThread(MainWindow *window)
             m_currentCamera2ImageMutex.unlock();
             
             m_camera2.unlock(buffers2);
+        }
+
+
+        if (window->m_camera1InfoLabelContents.find("time") !=window->m_camera1InfoLabelContents.end() &&
+                window->m_camera2InfoLabelContents.find("time") !=window->m_camera2InfoLabelContents.end()) {
+            double t1 = atof(window->m_camera1InfoLabelContents["time"].c_str());
+            double t2 = atof(window->m_camera2InfoLabelContents["time"].c_str());
+
+            window->m_camera1InfoLabelContents["deviation"] = window->m_camera2InfoLabelContents["deviation"]
+                    = anythingToString(fabs(t1-t2));
         }
 
 
