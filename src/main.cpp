@@ -32,6 +32,8 @@ using namespace std;
 
 int main(int argc, char **args)
 {
+    VT
+
     QApplication app(argc, args);
 
 

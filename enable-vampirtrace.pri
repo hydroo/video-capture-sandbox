@@ -16,39 +16,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 
-QMAKE_CXX = g++-4.4
-QMAKE_CXXFLAGS = -std=c++0x
-QMAKE_CC = gcc-4.4
-QMAKE_CFLAGS = 
-QMAKE_LINK = g++-4.4
-QMAKE_LFLAGS = -std=c++0x
+DEFINES += HAVE_VAMPIRTRACE
 
-TEMPLATE = app
+QMAKE_CXX=vtcxx
+QMAKE_CXXFLAGS += -vt:cxx g++-4.4 -vt:inst manual -DVTRACE
 
-DESTDIR = .
-TARGET = videocapture
+QMAKE_CC=vtcc
+QMAKE_CFLAGS += -vt:cc gcc-4.4 -vt:inst manual -DVTRACE
 
-CONFIG += warn_on debug
-
-#insert library paths here
-DEPENDPATH +=
-
-INCLUDEPATH += ./src
-LIBS += -lrt -lv4l2
-
-MOC_DIR = tmp/
-UI_DIR = tmp/
-RCC_DIR = tmp/
-OBJECTS_DIR = tmp/
-
-DEFINES += 
-
-HEADERS += ./src/CaptureDevice.hpp \
-           ./src/MainWindow.hpp
-
-SOURCES += ./src/CaptureDevice.cpp \
-           ./src/main.cpp \
-           ./src/MainWindow.cpp
-
-#include(enable-vampirtrace.pri)
+QMAKE_LINK = vtcxx
+QMAKE_LFLAGS += -vt:cxx g++-4.4 -vt:inst manual -DVTRACE
 
