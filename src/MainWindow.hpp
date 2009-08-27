@@ -1,4 +1,4 @@
-/* videocapture is tool with no special purpose
+/* videocapture is a tool with no special purpose
  *
  * Copyright (C) 2009 Ronny Brendel <ronnybrendel@gmail.com>
  *
