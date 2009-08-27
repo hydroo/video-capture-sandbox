@@ -1,9 +1,3 @@
-#QMAKE_CXX = vtcxx 
-#QMAKE_CXXFLAGS = -vt:cxx g++-4.4 -std=c++0x
-#QMAKE_CC = gcc-4.4
-#QMAKE_CFLAGS = 
-#QMAKE_LINK = vtcxx
-#QMAKE_LFLAGS = -vt:cxx g++-4.4 -std=c++0x
 # videocapture is tool with no special purpose
 # 
 # Copyright (C) 2009 Ronny Brendel <ronnybrendel@gmail.com>
