@@ -16,8 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef CAMERA_HPP
-#define CAMERA_HPP
+#ifndef CAPTURE_DEVICE_HPP
+#define CAPTURE_DEVICE_HPP
 
 
 #include "Prereqs.hpp"
@@ -169,5 +169,5 @@ private:
 };
 
 
-#endif /* CAMERA_HPP */
+#endif /* CAPTURE_DEVICE_HPP */
 
