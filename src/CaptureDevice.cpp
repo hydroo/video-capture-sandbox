@@ -19,6 +19,7 @@
 #include "CaptureDevice.hpp"
 
 #include <cassert>
+#include <cstdlib>
 #include <cerrno>
 #include <cmath>
 #include <cstring>
@@ -123,7 +124,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
             cerr << __PRETTY_FUNCTION__ << "Choosen clock is not available" << endl;
         } else {
             /* unexpected */
-            assert(0);
+            abort();
         }
         finish(); return false;
     }
@@ -133,7 +134,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
     struct stat st;
 
     if (stat(m_deviceFileName.c_str(), &st) == -1) {
-        cerr << __PRETTY_FUNCTION__ << " Cannot identify file. " << errno << strerror(errno) << endl;
+        cerr << __PRETTY_FUNCTION__ << " Cannot identify file. " << errno << " " << strerror(errno) << endl;
         finish(); return false;
     }
 
@@ -147,7 +148,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
     m_fileAccessMutex.unlock();
 
     if (m_fileDescriptor == -1) {
-        cerr << "Cannot open file. " << errno << strerror (errno) << endl;
+        cerr << "Cannot open file. " << errno << " " << strerror (errno) << endl;
         finish(); return false;
     }
 
@@ -160,7 +161,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
             cerr << "File is no V4L2 device." << endl;
             finish(); return false;
         } else {
-            cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYCAP " << errno << strerror(errno) << endl;
+            cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYCAP " << errno << " " << strerror(errno) << endl;
             finish(); return false;
         }
     }
@@ -198,7 +199,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
     fmt.fmt.pix.field = m_fieldFormat;
 
     if (xv4l2_ioctl(m_fileDescriptor, VIDIOC_S_FMT, &fmt) == -1) {
-        cerr << __PRETTY_FUNCTION__ << " VIDIOC_S_FMT " << errno << strerror(errno) << endl;
+        cerr << __PRETTY_FUNCTION__ << " VIDIOC_S_FMT " << errno << " " << strerror(errno) << endl;
         finish(); return false;
     }
 
@@ -288,10 +289,10 @@ void CaptureDevice::printDeviceInfo()
 	/* check capabilities */
 	if (xv4l2_ioctl(m_fileDescriptor, VIDIOC_QUERYCAP, &cap) == -1) {
         if (EINVAL == errno) {
-            cerr << "Device is no V4L2 device." << endl;
-            assert(0);
+            cerr << __PRETTY_FUNCTION__ << "Device is no V4L2 device." << endl;
+            abort();
         } else {
-            cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYCAP " << errno << strerror(errno) << endl;
+            cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYCAP " << errno << " " << strerror(errno) << endl;
             return;
         }
 	}
@@ -691,7 +692,7 @@ bool CaptureDevice::control(struct v4l2_control& ctl)
         return true;
 
     } else  {
-        cerr << __PRETTY_FUNCTION__ << " VIDIOC_G_CTRL " << errno << strerror(errno) << endl;
+        cerr << __PRETTY_FUNCTION__ << " VIDIOC_G_CTRL " << errno << " " << strerror(errno) << endl;
         return false;
     }
 }
@@ -706,7 +707,7 @@ bool CaptureDevice::setControl(const struct v4l2_control& ctl)
     if (xv4l2_ioctl(m_fileDescriptor, VIDIOC_S_CTRL, &copiedCtl) == 0) {
         return true;
     } else  {
-        cerr << __PRETTY_FUNCTION__ << " VIDIOC_S_CTRL " << errno << strerror(errno) << endl;
+        cerr << __PRETTY_FUNCTION__ << " VIDIOC_S_CTRL " << errno << " " << strerror(errno) << endl;
         return false;
     }
 }
@@ -727,7 +728,7 @@ bool CaptureDevice::queryControl(struct v4l2_queryctrl& ctl)
         /* invalid ids are anticipated */
         ret = false;
     } else {
-        cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYCTRL " << errno << strerror(errno) << endl;
+        cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYCTRL " << errno << " " << strerror(errno) << endl;
         ret = false;
     }
 
@@ -749,7 +750,7 @@ list<v4l2_querymenu> CaptureDevice::menus(const struct v4l2_queryctrl& ctl)
             ret.push_back(menu);
         } else {
             /* this is no crucial error - just a suposed menu index, who is not anyways */
-            cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYMENU " << errno << strerror(errno) << endl;
+            cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYMENU " << errno << " " << strerror(errno) << endl;
         }
     }
 
@@ -790,11 +791,11 @@ void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
         sel = select(fileDescriptor + 1, &filedescriptorset, NULL, NULL, &tv);
 
         if (sel == -1 && errno != EINTR) {
-            cerr << __PRETTY_FUNCTION__ << " Select error. " << errno << strerror(errno) << endl;
-            assert(0);
+            cerr << __PRETTY_FUNCTION__ << " Select error. " << errno << " " << strerror(errno) << endl;
+            abort();
         } else if (sel == 0) {
-            cerr << __PRETTY_FUNCTION__ << " Select timeout. " << errno << strerror(errno) << endl;
-            assert(0);
+            cerr << __PRETTY_FUNCTION__ << " Select timeout. " << errno << " " << strerror(errno) << endl;
+            abort();
         }
 
         /* read from the device */
@@ -803,8 +804,8 @@ void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
         fileAccessMutex.unlock();
 
         if (readlen == -1) {
-            cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << strerror(errno) << endl;
-            assert(0);
+            cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << " " << strerror(errno) << endl;
+            abort();
         }
     }
     free(buffer);
@@ -869,8 +870,8 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
         fileAccessMutex.unlock();
 
         if (sel == -1 && errno != EINTR) {
-            cerr << __PRETTY_FUNCTION__ << " Select error. " << errno << strerror(errno) << endl;
-            assert(0);
+            cerr << __PRETTY_FUNCTION__ << " Select error. " << errno << " " << strerror(errno) << endl;
+            abort();
         } else if (sel == 0) {
             /* select timeout */
             continue;
@@ -896,10 +897,11 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
         fileAccessMutex.unlock();
 
         if (readlen == -1) {
-            cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << strerror(errno);
+            cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << " " << strerror(errno);
             if (errno != 11 && errno != EAGAIN) {
+                cerr << endl;
                 /* ignore Resource temporarily not available errors and just try again */
-                assert(0);
+                abort();
             }
             cerr << ". ignored" << endl;
         }
