@@ -76,8 +76,9 @@ int main(int argc, char **args)
                 << "videocapture [-d ...] [-d ...] [-d ...] ..." << endl
                 << endl
                 << "  arguments:" << endl
-                << "    -d <device file> <res width> <res height>   use this device"
+                << "    -d <device file> <res width> <res height>   use this device" << endl
                 << "    -h, --help                                  show this message" << endl;
+            return 0;
         } else {
             cerr << "unknown argument: \"" << *it << endl;
         }
