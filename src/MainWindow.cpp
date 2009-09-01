@@ -198,7 +198,6 @@ void MainWindow::updateAllDeviceControlsButtonClicked(bool checked)
     for (auto it = m_captureDevices.begin(); it != m_captureDevices.end(); ++it) {
         if (it->device->capturingPaused() == true) {
             wasPaused.push_back(true);
-            cerr << true;
         } else {
             wasPaused.push_back(false);
             it->device->pauseCapturing(true);
