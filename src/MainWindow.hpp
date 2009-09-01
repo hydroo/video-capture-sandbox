@@ -95,8 +95,6 @@ private:
         QLabel *infoLabel;
         std::map<std::string,std::string> infoLabelContents;
         QLabel *imageLabel;
-        QPushButton *startStopButton;
-        QPushButton *updateControlsButton;
 
         QImage currentImage;
         std::mutex *currentImageMutex;

@@ -78,8 +78,6 @@ MainWindow::MainWindow(QWidget *parent, list<CaptureDevice*> captureDevices) :
         captureDevice.infoLabel = new QLabel(captureDevice.groupBox);
         captureDevice.infoLabelContents = map<string, string>();
         captureDevice.imageLabel = new QLabel(captureDevice.groupBox);
-        captureDevice.startStopButton = 0 /* TODO */;
-        captureDevice.updateControlsButton =  0 /* TODO */;
         captureDevice.currentImage = QImage();
         captureDevice.currentImageMutex = new mutex();
 
@@ -203,8 +201,6 @@ void MainWindow::updateAllDeviceControlsButtonClicked(bool checked)
         } else {
             isCapturing.push_back(false);
         }
-
-        // TODO it->updateControlsButton->setEnabled(false);
     }
 
 
@@ -262,7 +258,6 @@ void MainWindow::updateAllDeviceControlsButtonClicked(bool checked)
     auto it2 = isCapturing.begin();
     for (auto it = m_captureDevices.begin(); it != m_captureDevices.end(); ++it, ++it2) {
         if ((*it2) == true) it->device->pauseCapturing(false);
-        // TODO it->updateControlsButton->setEnabled(true);
     }
 
     m_updateAllDeviceControlsButton->setEnabled(true);
