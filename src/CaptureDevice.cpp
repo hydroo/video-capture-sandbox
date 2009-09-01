@@ -120,7 +120,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
 
     if (clockret == -1) {
         if (errno == EINVAL) {
-            cerr << __PRETTY_FUNCTION__ << "Choosen clock is not available. abort" << endl;
+            cerr << __PRETTY_FUNCTION__ << "Choosen clock is not available" << endl;
         } else {
             /* unexpected */
             abort();
@@ -889,12 +889,11 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
 
         if (readlen == -1) {
             cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << " " << strerror(errno);
-            if (errno != EAGAIN) {
-                cerr << ". ignored" << endl;
+            if (errno != 11 && errno != EAGAIN) {
                 /* ignore Resource temporarily not available errors and just try again */
                 abort();
             }
-            cerr << endl;
+            cerr << ". ignored" << endl;
         }
 
 
