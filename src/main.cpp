@@ -43,38 +43,56 @@ int main(int argc, char **args)
         argList.push_back(string(args[i]));
     }
 
+    list<CaptureDevice*> captureDevices;
+
     /* evaluate arguments start */
+    auto it = argList.begin();
+    ++it;
+    for (; it != argList.end(); ++it) {
+        if (*it == "-d") {
+            CaptureDevice *newCaptureDevice = new CaptureDevice();
+
+            string deviceFile = *(++it);
+            int width = atoi((++it)->c_str());
+            int height = atoi((++it)->c_str());
+
+            assert(deviceFile.empty() == false);
+            assert(width > 0);
+            assert(height > 0);
+
+            bool initialized = newCaptureDevice->init(deviceFile, V4L2_PIX_FMT_RGB24,
+                    (unsigned int)width, (unsigned int)height);
+            assert(initialized);
+
+            newCaptureDevice->printDeviceInfo();
+            newCaptureDevice->printFormats();
+            newCaptureDevice->printTimerInformation();
+            newCaptureDevice->printControls();
+
+            captureDevices.push_back(newCaptureDevice);
+
+        } else if (*it == "-h" || *it == "--help") {
+            cout
+                << "videocapture [-d ...] [-d ...] [-d ...] ..." << endl
+                << endl
+                << "  arguments:" << endl
+                << "    -d <device file> <res width> <res height>   use this device"
+                << "    -h, --help                                  show this message" << endl;
+        } else {
+            cerr << "unknown argument: \"" << *it << endl;
+        }
+    }
     /* evaluate arguments end */
 
-    CaptureDevice camera1;
-    CaptureDevice camera2;
-
-    bool initialized = camera1.init("/dev/video0", V4L2_PIX_FMT_RGB24, 352, 288);
-    assert(initialized);
-
-    camera1.printDeviceInfo();
-    camera1.printFormats();
-    camera1.printTimerInformation();
-    camera1.printControls();
-
-    bool initialized2 = camera2.init("/dev/video1", V4L2_PIX_FMT_RGB24, 352, 288);
-    assert(initialized2);
-
-    camera2.printDeviceInfo();
-    camera2.printFormats();
-    camera2.printTimerInformation();
-    camera2.printControls();
-
-
-    MainWindow mainWindow(0, camera1, camera2);
+    MainWindow mainWindow(0, captureDevices);
     mainWindow.show();
 
     int ret = app.exec();
 
 
-    camera1.finish();
-    camera2.finish();
-
+    for (auto it = captureDevices.begin(); it != captureDevices.end(); ++it) {
+        (*it)->finish();
+    }
 
     return ret;
 }

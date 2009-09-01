@@ -22,6 +22,7 @@
 
 #include "Prereqs.hpp"
 
+#include <list>
 #include <mutex>
 #include <QMap>
 #include <QMainWindow>
@@ -46,7 +47,7 @@ class MainWindow : public QMainWindow
 
 public:
 
-    MainWindow(QWidget *parent, CaptureDevice& camera1, CaptureDevice& camera2);
+    MainWindow(QWidget *parent, std::list<CaptureDevice*> captureDevices);
     ~MainWindow();
 
     virtual QSize sizeHint() const;
@@ -58,8 +59,9 @@ protected:
 
 private slots:
 
-    void startStopButtonClicked(bool checked);
-    void updateControlValuesButtonClicked(bool checked);
+    void startStopAllDevicesButtonClicked(bool checked);
+    void updateAllDeviceControlsButtonClicked(bool checked);
+
     void sliderControlValueChanged(int value);
     void checkBoxControlStateChanged(int state);
     void comboBoxControlIndexChanged (int index);
@@ -72,51 +74,51 @@ private:
     bool isPainting() const;
     void pausePaintThread(bool pause);
 
-    void createCaptureDeviceControlWidgets(CaptureDevice& camera, QWidget *widgetWhereToAddControlsTo);
+    void createCaptureDeviceControlWidgets(CaptureDevice* device, QWidget *widgetWhereToAddControlsTo);
 
     static void paintThread(MainWindow* window);
+
 
     QHBoxLayout *m_mainLayout;
     QVBoxLayout *m_globalButtonsLayout;
     QWidget *m_centralWidget;
-    QPushButton *m_startStopButton;
-    QPushButton *m_updateControlValuesButton;
-    QGroupBox *m_camera1GroupBox;
-        QVBoxLayout *m_camera1Layout;
-        QLabel *m_camera1InfoLabel;
-        std::map<std::string,std::string> m_camera1InfoLabelContents;
-        QLabel *m_camera1ImageLabel;
-        QPushButton *m_camera1StartStopButton;
-    QGroupBox *m_camera2GroupBox;
-        QLabel *m_camera2InfoLabel;
-        std::map<std::string,std::string> m_camera2InfoLabelContents;
-        QVBoxLayout *m_camera2Layout;
-        QLabel *m_camera2ImageLabel;
-        QPushButton *m_camera2StartStopButton;
+    QPushButton *m_updateAllDeviceControlsButton;
+    QPushButton *m_startStopAllDevicesButton;
+
+
+    struct PerCaptureDevice
+    {
+        CaptureDevice* device;
+
+        QGroupBox *groupBox;
+        QVBoxLayout *layout;
+        QLabel *infoLabel;
+        std::map<std::string,std::string> infoLabelContents;
+        QLabel *imageLabel;
+        QPushButton *startStopButton;
+        QPushButton *updateControlsButton;
+
+        QImage currentImage;
+        std::mutex *currentImageMutex;
+    };
+
+    std::list<PerCaptureDevice> m_captureDevices;
+
 
     struct ControlProperties
     {
         __u32 id;
-        CaptureDevice* camera;
+        CaptureDevice* device;
         enum v4l2_ctrl_type type;
         __s32 default_value;
     };
 
-
+    /** mapping from widget to respective v4l control of the camera */
     std::map<QObject*, ControlProperties> m_senderWidgetToControl;
 
-    CaptureDevice& m_camera1;
-    CaptureDevice& m_camera2;
 
     std::thread *m_paintThread;
-
     bool m_paintThreadCancellationFlag;
-
-    QImage m_currentCamera1Image;
-    QImage m_currentCamera2Image;
-
-    std::mutex m_currentCamera1ImageMutex;
-    std::mutex m_currentCamera2ImageMutex;
     std::mutex m_pausePaintingMutex;
 };
 

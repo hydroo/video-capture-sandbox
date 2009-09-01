@@ -47,73 +47,85 @@ template <typename T> static string anythingToString(T t)
 }
 
 
-MainWindow::MainWindow(QWidget *parent, CaptureDevice& camera1, CaptureDevice& camera2) :
+MainWindow::MainWindow(QWidget *parent, list<CaptureDevice*> captureDevices) :
         QMainWindow(parent),
-        m_camera1(camera1),
-        m_camera2(camera2),
         m_paintThread(0),
         m_paintThreadCancellationFlag(false)
 {
+
     /* *** init ui *** */
     m_mainLayout = new QHBoxLayout();
     m_globalButtonsLayout = new QVBoxLayout();
     m_globalButtonsLayout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     m_centralWidget = new QWidget(this);
-    m_startStopButton = new QPushButton(tr("Start"), m_centralWidget);
-    m_startStopButton->setCheckable(true);
-    connect(m_startStopButton, SIGNAL(clicked(bool)), this, SLOT(startStopButtonClicked(bool)));
-    m_updateControlValuesButton = new QPushButton(tr("Update Control Values"), m_centralWidget);
-    connect(m_updateControlValuesButton, SIGNAL(clicked(bool)), this, SLOT(updateControlValuesButtonClicked(bool)));
-    m_camera1GroupBox = new QGroupBox(tr("Camera 1"), m_centralWidget);
-        m_camera1Layout = new QVBoxLayout();
-        m_camera1Layout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
-        m_camera1InfoLabel = new QLabel(m_camera1GroupBox);
-        m_camera1ImageLabel = new QLabel(m_camera1GroupBox);
-        m_camera1ImageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    m_camera2GroupBox = new QGroupBox(tr("Camera 2"), m_centralWidget);
-        m_camera2Layout = new QVBoxLayout();
-        m_camera2Layout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
-        m_camera2InfoLabel = new QLabel(m_camera1GroupBox);
-        m_camera2ImageLabel = new QLabel(m_camera2GroupBox);
-        m_camera2ImageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_startStopAllDevicesButton= new QPushButton(tr("Start"), m_centralWidget);
+    m_startStopAllDevicesButton->setCheckable(true);
+    connect(m_startStopAllDevicesButton, SIGNAL(clicked(bool)), this, SLOT(startStopAllDevicesButtonClicked(bool)));
+    m_updateAllDeviceControlsButton= new QPushButton(tr("Update Controls"), m_centralWidget);
+    connect(m_updateAllDeviceControlsButton, SIGNAL(clicked(bool)), this, SLOT(updateAllDeviceControlsButtonClicked(bool)));
 
-    m_globalButtonsLayout->addWidget(m_startStopButton);
-    m_globalButtonsLayout->addWidget(m_updateControlValuesButton);
-    m_camera1Layout->addWidget(m_camera1InfoLabel);
-    m_camera2Layout->addWidget(m_camera2InfoLabel);
-    m_camera1Layout->addWidget(m_camera1ImageLabel);
-    m_camera2Layout->addWidget(m_camera2ImageLabel);
-    m_camera1GroupBox->setLayout(m_camera1Layout);
-    m_camera2GroupBox->setLayout(m_camera2Layout);
-    m_mainLayout->addWidget(m_camera1GroupBox);
-    m_mainLayout->addWidget(m_camera2GroupBox);
+
+    /* *** init all capture devices *** */
+    int loopCount = 0;
+    for (auto it = captureDevices.begin(); it != captureDevices.end(); ++it, ++loopCount) {
+
+        m_captureDevices.push_back(PerCaptureDevice());
+        PerCaptureDevice& captureDevice = m_captureDevices.back();
+
+        captureDevice.device = *it;
+        captureDevice.groupBox = new QGroupBox(tr("Camera %1").arg(loopCount), m_centralWidget);
+        captureDevice.layout = new QVBoxLayout();
+        captureDevice.infoLabel = new QLabel(captureDevice.groupBox);
+        captureDevice.infoLabelContents = map<string, string>();
+        captureDevice.imageLabel = new QLabel(captureDevice.groupBox);
+        captureDevice.startStopButton = 0 /* TODO */;
+        captureDevice.updateControlsButton =  0 /* TODO */;
+        captureDevice.currentImage = QImage();
+        captureDevice.currentImageMutex = new mutex();
+
+        captureDevice.layout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+        captureDevice.imageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+        captureDevice.layout->addWidget(captureDevice.infoLabel);
+        captureDevice.layout->addWidget(captureDevice.imageLabel);
+        captureDevice.groupBox->setLayout(captureDevice.layout);
+        m_mainLayout->addWidget(captureDevice.groupBox);
+
+        createCaptureDeviceControlWidgets(captureDevice.device, qobject_cast<QWidget*>(captureDevice.groupBox));
+    }
+
+    m_globalButtonsLayout->addWidget(m_startStopAllDevicesButton);
+    m_globalButtonsLayout->addWidget(m_updateAllDeviceControlsButton);
     m_mainLayout->addLayout(m_globalButtonsLayout);
     m_centralWidget->setLayout(m_mainLayout);
     setCentralWidget(m_centralWidget);
 
-    createCaptureDeviceControlWidgets(m_camera1, qobject_cast<QWidget*>(m_camera1GroupBox));
-    createCaptureDeviceControlWidgets(m_camera2, qobject_cast<QWidget*>(m_camera2GroupBox));
 
-    updateControlValuesButtonClicked(false);
+    updateAllDeviceControlsButtonClicked(false);
 }
 
 
 MainWindow::~MainWindow()
 {
+    for (auto it = m_captureDevices.begin(); it != m_captureDevices.end(); ++it) {
+        delete it->currentImageMutex;
+    }
 }
 
 
 QSize MainWindow::sizeHint() const
 {
-    return QSize(800,600);
+    return QSize(400,600);
 }
 
 
 void MainWindow::closeEvent(QCloseEvent * /*event*/)
 {
     stopPaintThread();
-    m_camera1.stopCapturing();
-    m_camera2.stopCapturing();
+
+    for (auto it = m_captureDevices.begin(); it != m_captureDevices.end(); ++it) {
+        it->device->stopCapturing();
+    }
 }
 
 
@@ -127,86 +139,100 @@ void MainWindow::paintEvent(QPaintEvent *event)
      * but for now this is ok
      */
 
-    m_camera1ImageLabel->setPixmap(QPixmap::fromImage(m_currentCamera1Image));
-    m_camera2ImageLabel->setPixmap(QPixmap::fromImage(m_currentCamera2Image));
+    for (auto it = m_captureDevices.begin(); it != m_captureDevices.end(); ++it) {
 
+        /* update image */
+        it->currentImageMutex->lock();
+        it->imageLabel->setPixmap(QPixmap::fromImage(it->currentImage));
+        it->currentImageMutex->unlock();
 
-    /* update info label text */
-    ostringstream camera1LabelText;
-    for (auto it = m_camera1InfoLabelContents.begin(); it != m_camera1InfoLabelContents.end(); ++it) {
-        camera1LabelText<< it->first << " : " << it->second << endl;
+        /* update info label text */
+        ostringstream infoLabelText;
+        for (auto itInfoLabelText = it->infoLabelContents.begin();
+                itInfoLabelText != it->infoLabelContents.end(); ++itInfoLabelText) {
+            infoLabelText << itInfoLabelText->first << " : " << itInfoLabelText->second << endl;
+        }
+        it->infoLabel->setText(infoLabelText.str().c_str());
+
     }
-    m_camera1InfoLabel->setText(camera1LabelText.str().c_str());
-
-    ostringstream camera2LabelText;
-    for (auto it = m_camera2InfoLabelContents.begin(); it != m_camera2InfoLabelContents.end(); ++it) {
-        camera2LabelText << it->first << " : " << it->second << endl;
-    }
-    m_camera2InfoLabel->setText(camera2LabelText.str().c_str());
-
 
     QWidget::paintEvent(event);
 }
 
 
-void MainWindow::startStopButtonClicked(bool checked)
+void MainWindow::startStopAllDevicesButtonClicked(bool checked)
 {
     if (checked == true ) {
-        if (m_camera1.isCapturing() == false) m_camera1.startCapturing();
-        else m_camera1.pauseCapturing(false);
-        if (m_camera2.isCapturing() == false) m_camera2.startCapturing();
-        else m_camera2.pauseCapturing(false);
+
+        for (auto it = m_captureDevices.begin(); it != m_captureDevices.end(); ++it) {
+            if (it->device->isCapturing() == false) it->device->startCapturing();
+            else it->device->pauseCapturing(false);
+        }
+
         if (isPainting() == false) startPaintThread();
         else pausePaintThread(false);
+
     } else {
-        assert(m_camera1.isCapturing() == true);
-        assert(m_camera2.isCapturing() == true);
+
         assert(isPainting() == true);
 
         pausePaintThread(true);
-        m_camera1.pauseCapturing(true);
-        m_camera2.pauseCapturing(true);
+
+        for (auto it = m_captureDevices.begin(); it != m_captureDevices.end(); ++it) {
+            assert(it->device->isCapturing() == true);
+            it->device->pauseCapturing(true);
+        }
+
     }
 }
 
 
-void MainWindow::updateControlValuesButtonClicked(bool checked)
+void MainWindow::updateAllDeviceControlsButtonClicked(bool checked)
 {
     Q_UNUSED(checked);
 
-    bool isCamera1Capturing = m_camera1.isCapturing();
-    bool isCamera2Capturing = m_camera2.isCapturing();
+    m_updateAllDeviceControlsButton->setEnabled(false);
 
 
-    if (isCamera1Capturing) m_camera1.pauseCapturing(true);
-    if (isCamera2Capturing) m_camera2.pauseCapturing(true);
+    /* disable each capture device */
+    list<bool> isCapturing;
+    for (auto it = m_captureDevices.begin(); it != m_captureDevices.end(); ++it) {
+        if (it->device->isCapturing()) {
+            isCapturing.push_back(true);
+            it->device->pauseCapturing(true);
+        } else {
+            isCapturing.push_back(false);
+        }
 
-    m_updateControlValuesButton->setEnabled(false);
+        // TODO it->updateControlsButton->setEnabled(false);
+    }
 
-    for (auto it = m_senderWidgetToControl.begin(); it != m_senderWidgetToControl.end(); ++it) {
+
+    /* for each controls do update */
+    for (auto itControls = m_senderWidgetToControl.begin(); itControls != m_senderWidgetToControl.end(); ++itControls) {
 
         struct v4l2_control currentValue;
-        currentValue.id = it->second.id;
-        if (it->second.camera->control(currentValue) == true) {
+        currentValue.id = itControls->second.id;
+        if (itControls->second.device->control(currentValue) == true) {
             /* currentValue->value = xxx */
         } else {
             cerr << __PRETTY_FUNCTION__ << "error getting control value. Using default." << endl;
-            currentValue.value = it->second.default_value;
+            currentValue.value = itControls->second.default_value;
         }
         
-        switch (it->second.type) {
+        switch (itControls->second.type) {
         case V4L2_CTRL_TYPE_INTEGER: {
-            QSlider *widget = qobject_cast<QSlider*>(it->first);
+            QSlider *widget = qobject_cast<QSlider*>(itControls->first);
             assert(widget != 0);
             widget->setValue(currentValue.value);
             break; }
         case V4L2_CTRL_TYPE_BOOLEAN: {
-            QCheckBox *widget = qobject_cast<QCheckBox*>(it->first);
+            QCheckBox *widget = qobject_cast<QCheckBox*>(itControls->first);
             assert(widget != 0);
             widget->setCheckState(currentValue.value == 0 ? Qt::Unchecked : Qt::Checked);
             break; }
         case V4L2_CTRL_TYPE_MENU: { /* never tested this - ronny 090820 */
-            QComboBox *widget = qobject_cast<QComboBox*>(it->first);
+            QComboBox *widget = qobject_cast<QComboBox*>(itControls->first);
             assert(widget != 0);
             /* select the current item */
             int a;
@@ -231,10 +257,15 @@ void MainWindow::updateControlValuesButtonClicked(bool checked)
         }
     }
 
-    if (isCamera1Capturing) m_camera1.pauseCapturing(false);
-    if (isCamera2Capturing) m_camera2.pauseCapturing(false);
 
-    m_updateControlValuesButton->setEnabled(true);
+    /* reenable each capture device */
+    auto it2 = isCapturing.begin();
+    for (auto it = m_captureDevices.begin(); it != m_captureDevices.end(); ++it, ++it2) {
+        if ((*it2) == true) it->device->pauseCapturing(false);
+        // TODO it->updateControlsButton->setEnabled(true);
+    }
+
+    m_updateAllDeviceControlsButton->setEnabled(true);
 }
 
 
@@ -243,7 +274,7 @@ void MainWindow::sliderControlValueChanged(int value)
     if (m_senderWidgetToControl.find(sender()) == 
             m_senderWidgetToControl.end()) return;
 
-    m_senderWidgetToControl[sender()].camera->pauseCapturing(true);
+    m_senderWidgetToControl[sender()].device->pauseCapturing(true);
 
     QWidget *senderWidget = qobject_cast<QWidget*>(sender());
     assert (senderWidget != 0);
@@ -252,9 +283,9 @@ void MainWindow::sliderControlValueChanged(int value)
     v4l2_control control;
     control.id = m_senderWidgetToControl[sender()].id;
     control.value = value;
-    m_senderWidgetToControl[sender()].camera->setControl(control);
+    m_senderWidgetToControl[sender()].device->setControl(control);
 
-    m_senderWidgetToControl[sender()].camera->pauseCapturing(false);
+    m_senderWidgetToControl[sender()].device->pauseCapturing(false);
 
     senderWidget->setEnabled(true);
 }
@@ -265,7 +296,7 @@ void MainWindow::checkBoxControlStateChanged(int state)
     if (m_senderWidgetToControl.find(sender()) == 
             m_senderWidgetToControl.end()) return;
 
-    m_senderWidgetToControl[sender()].camera->pauseCapturing(true);
+    m_senderWidgetToControl[sender()].device->pauseCapturing(true);
 
     assert(state == Qt::Unchecked || state == Qt::Checked);
 
@@ -276,9 +307,9 @@ void MainWindow::checkBoxControlStateChanged(int state)
     v4l2_control control;
     control.id = m_senderWidgetToControl[sender()].id;
     control.value = state == Qt::Unchecked ? 0 : 1;
-    m_senderWidgetToControl[sender()].camera->setControl(control);
+    m_senderWidgetToControl[sender()].device->setControl(control);
 
-    m_senderWidgetToControl[sender()].camera->pauseCapturing(false);
+    m_senderWidgetToControl[sender()].device->pauseCapturing(false);
 
     senderWidget->setEnabled(true);
 }
@@ -289,7 +320,7 @@ void MainWindow::comboBoxControlIndexChanged (int index)
     if (m_senderWidgetToControl.find(sender()) == 
             m_senderWidgetToControl.end()) return;
 
-    m_senderWidgetToControl[sender()].camera->pauseCapturing(true);
+    m_senderWidgetToControl[sender()].device->pauseCapturing(true);
 
     QWidget *senderWidget = qobject_cast<QWidget*>(sender());
     assert (senderWidget != 0);
@@ -299,9 +330,9 @@ void MainWindow::comboBoxControlIndexChanged (int index)
     control.id = m_senderWidgetToControl[sender()].id;
     control.value = qobject_cast<QComboBox*>(sender())->itemData(index).toInt();
 
-    m_senderWidgetToControl[sender()].camera->setControl(control);
+    m_senderWidgetToControl[sender()].device->setControl(control);
 
-    m_senderWidgetToControl[sender()].camera->pauseCapturing(false);
+    m_senderWidgetToControl[sender()].device->pauseCapturing(false);
 
     senderWidget->setEnabled(true);
 }
@@ -359,9 +390,9 @@ void MainWindow::pausePaintThread(bool pause)
 }
 
 
-void MainWindow::createCaptureDeviceControlWidgets(CaptureDevice& camera, QWidget *widgetWhereToAddControlsTo)
+void MainWindow::createCaptureDeviceControlWidgets(CaptureDevice* device, QWidget *widgetWhereToAddControlsTo)
 {
-    const pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > cameraControls = camera.controls();
+    const pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > cameraControls = device->controls();
     const list<struct v4l2_queryctrl>& controls = cameraControls.first;
     const list<struct v4l2_querymenu>& menuItems = cameraControls.second;
 
@@ -372,7 +403,7 @@ void MainWindow::createCaptureDeviceControlWidgets(CaptureDevice& camera, QWidge
         QWidget *controlLabel;
         string controlName = it->name != 0 ? string((const char*) it->name) : string("n/a");
 
-        /* qDebug() << &camera << controlName.c_str() << "min" << it->minimum << "max" << it->maximum << "cur"
+        /* qDebug() << device << controlName.c_str() << "min" << it->minimum << "max" << it->maximum << "cur"
                 << currentValue.value << "default" << it->default_value; */
 
         switch (it->type) {
@@ -437,7 +468,7 @@ void MainWindow::createCaptureDeviceControlWidgets(CaptureDevice& camera, QWidge
 
         if (controlWidget != 0) {
             m_senderWidgetToControl.insert(make_pair(qobject_cast<QObject*>(controlWidget),
-                    ControlProperties({it->id, &camera, it->type, it->default_value})));
+                    ControlProperties({it->id, device, it->type, it->default_value})));
             controlLayout->addWidget(controlWidget);
         }
 
@@ -448,85 +479,68 @@ void MainWindow::createCaptureDeviceControlWidgets(CaptureDevice& camera, QWidge
 
 void MainWindow::paintThread(MainWindow *window)
 {
-    CaptureDevice &m_camera1 = window->m_camera1;
-    CaptureDevice &m_camera2 = window->m_camera2;
-    QImage& m_currentCamera1Image = window->m_currentCamera1Image;
-    QImage& m_currentCamera2Image = window->m_currentCamera2Image;
-    std::mutex& m_currentCamera1ImageMutex = window->m_currentCamera1ImageMutex;
-    std::mutex& m_currentCamera2ImageMutex = window->m_currentCamera2ImageMutex;
     std::mutex& pausePaintingMutex = window->m_pausePaintingMutex;
     bool &m_paintThreadCancellationFlag = window->m_paintThreadCancellationFlag;
 
-    struct timespec lastPictureCamera1 = {numeric_limits<time_t>::min(), 0};
-    struct timespec lastPictureCamera2 = {numeric_limits<time_t>::min(), 0};
+    /* init list of last image times */
+    list<timespec> lastImageTimes;
+    for (auto it = window->m_captureDevices.begin(); it != window->m_captureDevices.end(); ++it) {
+        lastImageTimes.push_back(timespec());
+        lastImageTimes.back() = {numeric_limits<time_t>::min(), 0};
+    }
+
 
     while (m_paintThreadCancellationFlag == false) {
 
+        bool updateGUI = false;
+
+        /* pausing mechanism */
         pausePaintingMutex.lock();
         pausePaintingMutex.unlock();
 
-        bool capture1 = m_camera1.newerBuffersAvailable(lastPictureCamera1) > 0;
-        bool capture2 = m_camera2.newerBuffersAvailable(lastPictureCamera2) > 0;
-
-        deque<const CaptureDevice::Buffer*> buffers1;
-        deque<const CaptureDevice::Buffer*> buffers2;
-
-        const CaptureDevice::Buffer* buffer1 = buffers1[0];
-        const CaptureDevice::Buffer* buffer2 = buffers2[0];
+        auto itImageTimes = lastImageTimes.begin();
+        for (auto it = window->m_captureDevices.begin();
+                it != window->m_captureDevices.end()
+                ; ++it, ++itImageTimes) {
         
-        /* minimized time between two buffer locks */
-        if (capture1) {
-            buffers1 = m_camera1.lockFirstNBuffers(1);
-        }
-        if (capture2) {
-            buffers2 = m_camera2.lockFirstNBuffers(1);
-        }
+            if (it->device->newerBuffersAvailable(*itImageTimes) > 0) {
 
-        if (capture1) {
-            buffer1 = buffers1[0];
+                updateGUI = true;
 
-            lastPictureCamera1 = buffer1->time;
+                deque<const CaptureDevice::Buffer*> buffers;
+                const CaptureDevice::Buffer* buffer = buffers[0];
 
-            window->m_camera1InfoLabelContents["time"] = anythingToString(
-                    (lastPictureCamera1.tv_sec + lastPictureCamera1.tv_nsec / 1000000000.0));
+                buffers = it->device->lockFirstNBuffers(1);
+                buffer = buffers[0];
 
-            m_currentCamera1ImageMutex.lock();
-            m_currentCamera1Image = QImage(buffer1->buffer, m_camera1.captureSize().first,
-                    m_camera1.captureSize().second, QImage::Format_RGB888);
-            m_currentCamera1ImageMutex.unlock();
-            
-            m_camera1.unlock(buffers1);
-        }
+                *itImageTimes = buffer->time;
 
-        /* KLUDGE code duplication at its best */
-        if (capture2) {
-            buffer2 = buffers2[0];
+                it->infoLabelContents["time"] = anythingToString(
+                        (itImageTimes->tv_sec + itImageTimes->tv_nsec / 1000000000.0));
 
-            lastPictureCamera2 = buffer2->time;
+                it->currentImageMutex->lock();
+                it->currentImage = QImage(buffer->buffer, it->device->captureSize().first,
+                        it->device->captureSize().second, QImage::Format_RGB888);
+                it->currentImageMutex->unlock();
+                
+                it->device->unlock(buffers);
+            }
 
-            window->m_camera2InfoLabelContents["time"] = anythingToString(
-                    (lastPictureCamera2.tv_sec + lastPictureCamera2.tv_nsec / 1000000000.0));
+            /*
+             does not work with N capture devices TODO
 
-            m_currentCamera2ImageMutex.lock();
-            m_currentCamera2Image = QImage(buffer2->buffer, m_camera2.captureSize().first,
-                    m_camera2.captureSize().second, QImage::Format_RGB888);
-            m_currentCamera2ImageMutex.unlock();
-            
-            m_camera2.unlock(buffers2);
+             if (window->m_camera1InfoLabelContents.find("time") !=window->m_camera1InfoLabelContents.end() &&
+                    window->m_camera2InfoLabelContents.find("time") !=window->m_camera2InfoLabelContents.end()) {
+                double t1 = atof(window->m_camera1InfoLabelContents["time"].c_str());
+                double t2 = atof(window->m_camera2InfoLabelContents["time"].c_str());
+
+                window->m_camera1InfoLabelContents["deviation"] = window->m_camera2InfoLabelContents["deviation"]
+                        = anythingToString(fabs(t1-t2));
+            }*/
         }
 
 
-        if (window->m_camera1InfoLabelContents.find("time") !=window->m_camera1InfoLabelContents.end() &&
-                window->m_camera2InfoLabelContents.find("time") !=window->m_camera2InfoLabelContents.end()) {
-            double t1 = atof(window->m_camera1InfoLabelContents["time"].c_str());
-            double t2 = atof(window->m_camera2InfoLabelContents["time"].c_str());
-
-            window->m_camera1InfoLabelContents["deviation"] = window->m_camera2InfoLabelContents["deviation"]
-                    = anythingToString(fabs(t1-t2));
-        }
-
-
-        if (capture1 || capture2) {
+        if (updateGUI == true) {
 
             window->update();
 
