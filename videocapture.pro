@@ -30,11 +30,14 @@ TARGET = videocapture
 
 CONFIG += warn_on debug
 
+CONFIG += link_pkgconfig
+PKGCONFIG += libv4l2
+
 #insert library paths here
 DEPENDPATH +=
 
 INCLUDEPATH += ./src
-LIBS += -lrt -lv4l2
+LIBS += -lrt
 
 MOC_DIR = tmp/
 UI_DIR = tmp/
