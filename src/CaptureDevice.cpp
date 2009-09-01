@@ -19,6 +19,7 @@
 #include "CaptureDevice.hpp"
 
 #include <cassert>
+#include <cstdlib>
 #include <cerrno>
 #include <cmath>
 #include <cstring>
@@ -122,7 +123,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
             cerr << __PRETTY_FUNCTION__ << "Choosen clock is not available. abort" << endl;
         } else {
             /* unexpected */
-            assert(0);
+            abort();
         }
         finish(); return false;
     }
@@ -288,7 +289,7 @@ void CaptureDevice::printDeviceInfo()
 	if (xv4l2_ioctl(m_fileDescriptor, VIDIOC_QUERYCAP, &cap) == -1) {
         if (EINVAL == errno) {
             cerr << __PRETTY_FUNCTION__ << "Device is no V4L2 device." << endl;
-            assert(0);
+            abort();
         } else {
             cerr << __PRETTY_FUNCTION__ << " VIDIOC_QUERYCAP " << errno << " " << strerror(errno) << endl;
             return;
@@ -782,10 +783,10 @@ void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
 
         if (sel == -1 && errno != EINTR) {
             cerr << __PRETTY_FUNCTION__ << " Select error. " << errno << " " << strerror(errno) << endl;
-            assert(0);
+            abort();
         } else if (sel == 0) {
             cerr << __PRETTY_FUNCTION__ << " Select timeout. " << errno << " " << strerror(errno) << endl;
-            assert(0);
+            abort();
         }
 
         /* read from the device */
@@ -795,7 +796,7 @@ void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
 
         if (readlen == -1) {
             cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << " " << strerror(errno) << endl;
-            assert(0);
+            abort();
         }
     }
     free(buffer);
@@ -861,7 +862,7 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
 
         if (sel == -1 && errno != EINTR) {
             cerr << __PRETTY_FUNCTION__ << " Select error. " << errno << " " << strerror(errno) << endl;
-            assert(0);
+            abort();
         } else if (sel == 0) {
             /* select timeout */
             continue;
@@ -888,10 +889,10 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
 
         if (readlen == -1) {
             cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << " " << strerror(errno);
+            if (errno != EAGAIN) {
                 cerr << ". ignored" << endl;
-            if (errno != 11) {
                 /* ignore Resource temporarily not available errors and just try again */
-                assert(0);
+                abort();
             }
             cerr << endl;
         }
