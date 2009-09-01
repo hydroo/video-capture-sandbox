@@ -898,7 +898,7 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
 
         if (readlen == -1) {
             cerr << __PRETTY_FUNCTION__ << " Read error. " << errno << " " << strerror(errno);
-            if (errno != 11 && errno != EAGAIN) {
+            if (errno != EAGAIN) {
                 cerr << endl;
                 /* ignore Resource temporarily not available errors and just try again */
                 abort();
