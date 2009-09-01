@@ -41,7 +41,8 @@ using namespace std;
 
 CaptureDevice::CaptureDevice() :
         m_fileDescriptor(-1),
-        m_captureThread(0)
+        m_captureThread(0),
+        m_capturingPaused(false)
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
 }
@@ -627,9 +628,17 @@ void CaptureDevice::pauseCapturing(bool pause)
 
     if (pause == true ) {
         m_pauseCapturingMutex.try_lock();
+        m_capturingPaused = true;
     } else {
         m_pauseCapturingMutex.unlock();
+        m_capturingPaused = false;
     }
+}
+
+
+bool CaptureDevice::capturingPaused() const
+{
+    return m_capturingPaused;
 }
 
 

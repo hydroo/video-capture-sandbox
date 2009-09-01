@@ -119,6 +119,7 @@ QSize MainWindow::sizeHint() const
 
 void MainWindow::closeEvent(QCloseEvent * /*event*/)
 {
+    pausePaintThread(false);
     stopPaintThread();
 
     for (auto it = m_captureDevices.begin(); it != m_captureDevices.end(); ++it) {
@@ -193,13 +194,14 @@ void MainWindow::updateAllDeviceControlsButtonClicked(bool checked)
 
 
     /* disable each capture device */
-    list<bool> isCapturing;
+    list<bool> wasPaused;
     for (auto it = m_captureDevices.begin(); it != m_captureDevices.end(); ++it) {
-        if (it->device->isCapturing()) {
-            isCapturing.push_back(true);
-            it->device->pauseCapturing(true);
+        if (it->device->capturingPaused() == true) {
+            wasPaused.push_back(true);
+            cerr << true;
         } else {
-            isCapturing.push_back(false);
+            wasPaused.push_back(false);
+            it->device->pauseCapturing(true);
         }
     }
 
@@ -255,9 +257,10 @@ void MainWindow::updateAllDeviceControlsButtonClicked(bool checked)
 
 
     /* reenable each capture device */
-    auto it2 = isCapturing.begin();
+    auto it2 = wasPaused.begin();
     for (auto it = m_captureDevices.begin(); it != m_captureDevices.end(); ++it, ++it2) {
-        if ((*it2) == true) it->device->pauseCapturing(false);
+        if ((*it2) == false) it->device->pauseCapturing(false);
+        else it->device->pauseCapturing(true);
     }
 
     m_updateAllDeviceControlsButton->setEnabled(true);
