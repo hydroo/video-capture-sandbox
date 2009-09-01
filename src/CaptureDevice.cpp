@@ -119,7 +119,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
 
     if (clockret == -1) {
         if (errno == EINVAL) {
-            cerr << __PRETTY_FUNCTION__ << "Choosen clock is not available. abort" << endl;
+            cerr << __PRETTY_FUNCTION__ << "Choosen clock is not available" << endl;
         } else {
             /* unexpected */
             assert(0);
