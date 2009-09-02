@@ -7,3 +7,5 @@ vimsession
 *~
 *.jpg
 *.jpeg
+*doxygen*
+
