@@ -79,6 +79,7 @@ public:
             unsigned int captureWidth,
             unsigned int captureHeight,
             unsigned int buffersCount = 2,
+            clockid_t clockId = CLOCK_MONOTONIC);
 
     void finish();
 
