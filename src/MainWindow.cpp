@@ -211,6 +211,7 @@ void MainWindow::updateAllDeviceControlsButtonClicked(bool checked)
 
         /* leave out disabled controls */
         if (qobject_cast<QWidget*>(itControls->first)->isEnabled() == false) continue;
+
         struct v4l2_control currentValue;
         currentValue.id = itControls->second.id;
         if (itControls->second.device->control(currentValue) == true) {
@@ -459,6 +460,7 @@ void MainWindow::createCaptureDeviceControlWidgets(CaptureDevice* device, QWidge
             assert(0);
             break;
         }
+
 
         QHBoxLayout *controlLayout = new QHBoxLayout();
 
