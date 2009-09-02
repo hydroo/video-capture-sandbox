@@ -355,11 +355,11 @@ void CaptureDevice::printControls()
         cout << ", min " << it->minimum << ", max " << it->maximum << ", step "
                 << it->step << ", default " << it->default_value << endl;
 
-        if (!(it->flags & V4L2_CTRL_FLAG_DISABLED) && it->type == V4L2_CTRL_TYPE_MENU) {
+        if (it->type == V4L2_CTRL_TYPE_MENU) {
 
             for (auto it2 = menus.begin(); it2 != menus.end(); ++it2) {
                 if (it2->id == it->id) {
-                    cout << "  " << it2->name << endl;
+                    cout << "    " << it2->name << endl;
                 }
             }
         }
@@ -649,7 +649,7 @@ pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > CaptureDevice::c
         if (queryControl(ctl) == true) {
             ret.first.push_back(ctl);
 
-            if (!(ctl.flags & V4L2_CTRL_FLAG_DISABLED) && ctl.type == V4L2_CTRL_TYPE_MENU) {
+            if (ctl.type == V4L2_CTRL_TYPE_MENU) {
                 list<struct v4l2_querymenu> m = menus(ctl);
                 ret.second.insert(ret.second.end(),m.begin(),m.end());
             }
@@ -661,7 +661,7 @@ pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > CaptureDevice::c
         ctl.id = id;
         if (queryControl(ctl) == true) {
             ret.first.push_back(ctl);
-            if (!(ctl.flags & V4L2_CTRL_FLAG_DISABLED) && ctl.type == V4L2_CTRL_TYPE_MENU) {
+            if (ctl.type == V4L2_CTRL_TYPE_MENU) {
                 list<struct v4l2_querymenu> m = menus(ctl);
                 ret.second.insert(ret.second.end(),m.begin(),m.end());
             }

@@ -22,6 +22,7 @@
 #include <cmath>
 #include <functional>
 #include <iostream>
+#include <linux/videodev2.h>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QGroupBox>
@@ -208,6 +209,8 @@ void MainWindow::updateAllDeviceControlsButtonClicked(bool checked)
     /* for each controls do update */
     for (auto itControls = m_senderWidgetToControl.begin(); itControls != m_senderWidgetToControl.end(); ++itControls) {
 
+        /* leave out disabled controls */
+        if (qobject_cast<QWidget*>(itControls->first)->isEnabled() == false) continue;
         struct v4l2_control currentValue;
         currentValue.id = itControls->second.id;
         if (itControls->second.device->control(currentValue) == true) {
@@ -460,12 +463,14 @@ void MainWindow::createCaptureDeviceControlWidgets(CaptureDevice* device, QWidge
         QHBoxLayout *controlLayout = new QHBoxLayout();
 
         if (controlLabel != 0) {
+            controlLabel->setEnabled(!(it->flags & V4L2_CTRL_FLAG_DISABLED));
             controlLayout->addWidget(controlLabel);
         }
 
         if (controlWidget != 0) {
             m_senderWidgetToControl.insert(make_pair(qobject_cast<QObject*>(controlWidget),
                     ControlProperties({it->id, device, it->type, it->default_value})));
+            controlWidget->setEnabled(!(it->flags & V4L2_CTRL_FLAG_DISABLED));
             controlLayout->addWidget(controlWidget);
         }
 
