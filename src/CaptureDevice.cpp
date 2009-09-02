@@ -682,6 +682,7 @@ pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > CaptureDevice::c
 
 bool CaptureDevice::control(struct v4l2_control& ctl)
 {
+    bool ret;
     /* which errors VIDIOC_G_CTRL can throw:
         http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#VIDIOC-G-CTRL */
 
@@ -689,27 +690,32 @@ bool CaptureDevice::control(struct v4l2_control& ctl)
 
         /* v4l-copied: The driver may clamp the value or return ERANGE, ignored here */
 
-        return true;
+        ret = true;
 
     } else  {
         cerr << __PRETTY_FUNCTION__ << " VIDIOC_G_CTRL " << errno << " " << strerror(errno) << endl;
-        return false;
+        ret = false;
     }
+
+    return ret;
 }
 
 
 bool CaptureDevice::setControl(const struct v4l2_control& ctl)
 {
+    bool ret;
     struct v4l2_control copiedCtl = ctl;
     /* which errors VIDIOC_S_CTRL can throw:
         http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#VIDIOC-G-CTRL */
 
     if (xv4l2_ioctl(m_fileDescriptor, VIDIOC_S_CTRL, &copiedCtl) == 0) {
-        return true;
+        ret = true;
     } else  {
         cerr << __PRETTY_FUNCTION__ << " VIDIOC_S_CTRL " << errno << " " << strerror(errno) << endl;
-        return false;
+        ret = false;
     }
+
+    return ret;
 }
 
 
