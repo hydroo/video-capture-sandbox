@@ -39,8 +39,8 @@ namespace std
 
 /**
  * @note
- *  * changes in the most settings take effect when newly initializing the
- *    instance
+ *    changes to most of the settings will take effect when newly initializing the
+ *    capture device
  */
 class CaptureDevice
 {
@@ -51,28 +51,28 @@ public:
     CaptureDevice& operator=(const CaptureDevice&) = delete;
     ~CaptureDevice();
 
-    /** accords with the input from init() */
+    /** corresponds to the 'clockId' passed to init() */
     clockid_t clockId() const;
     /** set programatically */
     unsigned int bufferSize() const;
-    /** possibly changed programatically */
+    /** possibly changed during initialization by the device */
     std::pair<unsigned int, unsigned int> captureSize() const;
-    /** fixed value NONE, possibly changed programatically */
+    /** fixed value NONE, possibly changed during initialization by the device */
     enum v4l2_field fieldFormat() const;
-    /** accords with the input from init() */
+    /** corresponds to the 'deviceFileName' passed to init() */
     const std::string& fileName() const;
-    /** possibly changed programatically - V4L2_PIX_FMT_* values */
+    /** possibly changed during initialization by the device.
+        V4L2_PIX_FMT_* values from @see linux/videodev2.h */
     __u32 pixelFormat() const;
-    /** pixelFormat as a 4 character string */
+    /** returns the pixelFormat encoded as a 4 character string */
     std::string pixelFormatString() const;
 
 
     /**
-     * init the camera
-     *
      * @returns true on success, false on failure
+     * @param buffersCount Number of buffers for storing images into in the queue. Has to be greater than 1.
      *
-     * @note on failure, finish() is called implicitely
+     * @note on failure, finish() is called implicitly
      */
     bool init(const std::string& deviceFileName,
             __u32 m_pixelFormat,
@@ -83,11 +83,13 @@ public:
 
     void finish();
 
+
     void printDeviceInfo();
     void printControls();
     void printFormats();
     void printTimerInformation() const;
 
+    
     struct Buffer
     {
         timespec time;
@@ -96,38 +98,38 @@ public:
         unsigned char *buffer;
     };
 
-    /** n <= bufferCount-1 */
+    /** n has to be less than  'buffersCount' */
     std::deque<const Buffer*> lockFirstNBuffers(unsigned int n);
     void unlock(const std::deque<const Buffer*>& buffers);
-    /** @returns number of newer buffers.
-        when actually locking the buffer this number might defer.
-        It can be larger, or it can be n-1, when previously n ~.~ */
+    /** @returns number of newer buffers
+        @note
+        When actually locking the buffer this number might differ due to threading.
+        It can be larger, or it can be n-1, when previously n */
     unsigned int newerBuffersAvailable(const timespec& newerThan);
 
-    /**
-     * blocks for several seconds
-     *
-     * @returns average period and standard deviation 
-     */
+    /** @returns average period for capturing an image and the standard deviation
+        @note blocks for several seconds */
     std::pair<double, double> determineCapturePeriod(double secondsToIterate = 5.0);
 
     /** creates the capture thread */
     void startCapturing();
     /** blocks until the capture thread is joined */
     void stopCapturing();
+    /** @returns wether the capture thread has been created */
     bool isCapturing() const;
 
     void pauseCapturing(bool pause);
     bool capturingPaused() const;
 
-    /** @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-QUERYCTRL
+    /** @returns all controls and control menu items, which the capture device provides
+        @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-QUERYCTRL
         @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-QUERYMENU */
     std::pair<std::list<struct v4l2_queryctrl>, std::list<struct v4l2_querymenu> > controls();
 
-    /** @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-CONTROL
-        @returns whether the result is valid - why? -> better error checking to come */
+    /** @returns true if the query succeeded - more sophisticated error checking to come
+        @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-CONTROL */
     bool control(struct v4l2_control&);
-    /** @returns whether the call succeeded - why not ? -> better error checking to come */
+    /** @returns true if the call succeeded - more sophisticated error checking to come */
     bool setControl(const struct v4l2_control&);
 
 private:

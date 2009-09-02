@@ -40,7 +40,8 @@
 using namespace std;
 
 
-template <typename T> static string anythingToString(T t)
+template <typename T>
+static string anythingToString(T t)
 {
     ostringstream os;
     os << t;
@@ -114,7 +115,7 @@ MainWindow::~MainWindow()
 
 QSize MainWindow::sizeHint() const
 {
-    return QSize(400,600);
+    return QSize(400,400);
 }
 
 
