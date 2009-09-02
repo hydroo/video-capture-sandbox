@@ -83,10 +83,6 @@ unsigned int CaptureDevice::bufferSize() const
 {
     return m_bufferSize;
 }
-unsigned int CaptureDevice::readTimeOut() const
-{
-    return m_readTimeOut;
-}
 clockid_t CaptureDevice::clockId() const
 {
     return m_timerClockId;
@@ -94,8 +90,7 @@ clockid_t CaptureDevice::clockId() const
 
 
 bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsigned int captureWidth,
-        unsigned int captureHeight, unsigned int buffersCount, clockid_t clockId,
-        unsigned int readTimeOut )
+        unsigned int captureHeight, unsigned int buffersCount, clockid_t clockId)
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
     assert(m_fileDescriptor == -1);
@@ -107,7 +102,6 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
     m_deviceFileName = deviceFileName;
     m_fieldFormat = V4L2_FIELD_NONE;
     m_pixelFormat = pixelFormat;
-    m_readTimeOut = readTimeOut;
     m_timerClockId = clockId;
     m_captureThreadCancellationFlag = false;
 

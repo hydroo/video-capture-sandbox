@@ -65,8 +65,6 @@ public:
     __u32 pixelFormat() const;
     /** pixelFormat as a 4 character string */
     std::string pixelFormatString() const;
-    /** accords with the input from init() */
-    unsigned int readTimeOut() const;
 
 
     /**
@@ -81,8 +79,6 @@ public:
             unsigned int captureWidth,
             unsigned int captureHeight,
             unsigned int buffersCount = 2,
-            clockid_t clockId = CLOCK_MONOTONIC,
-            unsigned int readTimeOut = 2);
 
     void finish();
 
@@ -150,7 +146,6 @@ private:
     enum v4l2_field m_fieldFormat;
     std::string m_deviceFileName;
     __u32 m_pixelFormat;
-    unsigned int m_readTimeOut;
 
     unsigned int m_bufferSize;
     std::list<Buffer> m_buffers;
