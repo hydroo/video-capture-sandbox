@@ -68,6 +68,7 @@ int main(int argc, char **args)
             newCaptureDevice->printFormats();
             newCaptureDevice->printTimerInformation();
             newCaptureDevice->printControls();
+            cout << endl;
 
             captureDevices.push_back(newCaptureDevice);
 

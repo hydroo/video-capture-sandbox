@@ -38,8 +38,6 @@
 using namespace std;
 
 
-
-
 CaptureDevice::CaptureDevice() :
         m_fileDescriptor(-1),
         m_captureThread(0),
@@ -606,6 +604,8 @@ void CaptureDevice::stopCapturing()
 {
     if (m_captureThread != 0) {
         assert(m_captureThread->joinable() == true);
+
+        if (capturingPaused() == true) pauseCapturing(false);
 
         m_captureThreadCancellationFlag = true;
         m_captureThread->join();
