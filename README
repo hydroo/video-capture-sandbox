@@ -3,16 +3,15 @@ Requirements:
     Programs/Libs:
     - libv4l >= 0.6.1 http://people.atrpms.net/~hdegoede/
     - gcc >= 4.4
-    - qt4-dev
+    - libqt4-dev
 
-    Things:
-    - two camera devices ( /dev/video0 and /dev/video1 e.g.)
+    Things needed:
+    - nothing
 
 Install:
-    $ qmake-qt4
+    $ qmake
     $ make
 
 Run:
     $ ./videocapture
-
 
