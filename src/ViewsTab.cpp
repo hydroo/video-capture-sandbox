@@ -18,3 +18,8 @@
 
 #include "ViewsTab.hpp"
 
+
+ViewsTab::ViewsTab(QWidget *parent) : QWidget(parent)
+{
+}
+

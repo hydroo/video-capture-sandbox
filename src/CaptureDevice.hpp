@@ -19,7 +19,6 @@
 #ifndef CAPTURE_DEVICE_HPP
 #define CAPTURE_DEVICE_HPP
 
-
 #include "Prereqs.hpp"
 
 #include <ctime>

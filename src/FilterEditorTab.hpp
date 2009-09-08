@@ -21,6 +21,15 @@
 
 
 #include "Prereqs.hpp"
+#include <QWidget>
+
+class FilterEditorTab : public QWidget
+{
+    Q_OBJECT
+public:
+    FilterEditorTab(QWidget *parent);
+};
+
 
 #endif /* FILTER_EDITOR_TAB_HPP */
 

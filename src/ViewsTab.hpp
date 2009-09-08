@@ -21,6 +21,16 @@
 
 
 #include "Prereqs.hpp"
+#include <QWidget>
+
+
+class ViewsTab : public QWidget
+{
+    Q_OBJECT
+public:
+    ViewsTab(QWidget *parent);
+};
+
 
 #endif /* VIEWS_TAB_HPP */
 

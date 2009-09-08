@@ -19,27 +19,12 @@
 #ifndef MAIN_WINDOW_HPP
 #define MAIN_WINDOW_HPP
 
-
 #include "Prereqs.hpp"
-
 #include <list>
-#include <mutex>
-#include <QMap>
 #include <QMainWindow>
-#include <QImage>
-#include "CaptureDevice.hpp"
 
-class QGroupBox;
-class QHBoxLayout;
-class QLabel;
-class QPaintEvent;
-class QPushButton;
-class QVBoxLayout;
+class QTabWidget;
 class CaptureDevice;
-
-
-namespace std { class thread; };
-
 
 class MainWindow : public QMainWindow
 {
@@ -50,74 +35,9 @@ public:
     MainWindow(QWidget *parent, std::list<CaptureDevice*> captureDevices);
     ~MainWindow();
 
-    virtual QSize sizeHint() const;
-
-protected:
-
-    virtual void closeEvent(QCloseEvent *event);
-    virtual void paintEvent(QPaintEvent *event);
-
-private slots:
-
-    void startStopAllDevicesButtonClicked(bool checked);
-    void updateAllDeviceControlsButtonClicked(bool checked);
-
-    void sliderControlValueChanged(int value);
-    void checkBoxControlStateChanged(int state);
-    void comboBoxControlIndexChanged (int index);
-    void buttonControlClicked(bool checked);
-
 private:
 
-    void startPaintThread();
-    void stopPaintThread();
-    bool isPainting() const;
-    void pausePaintThread(bool pause);
-
-    void createCaptureDeviceControlWidgets(CaptureDevice* device, QWidget *widgetWhereToAddControlsTo);
-
-    static void paintThread(MainWindow* window);
-
-
-    QHBoxLayout *m_mainLayout;
-    QVBoxLayout *m_globalButtonsLayout;
-    QWidget *m_centralWidget;
-    QPushButton *m_updateAllDeviceControlsButton;
-    QPushButton *m_startStopAllDevicesButton;
-
-
-    struct PerCaptureDevice
-    {
-        CaptureDevice* device;
-
-        QGroupBox *groupBox;
-        QVBoxLayout *layout;
-        QLabel *infoLabel;
-        std::map<std::string,std::string> infoLabelContents;
-        QLabel *imageLabel;
-
-        QImage currentImage;
-        std::mutex *currentImageMutex;
-    };
-
-    std::list<PerCaptureDevice> m_captureDevices;
-
-
-    struct ControlProperties
-    {
-        __u32 id;
-        CaptureDevice* device;
-        enum v4l2_ctrl_type type;
-        __s32 default_value;
-    };
-
-    /** mapping from widget to respective v4l control of the camera */
-    std::map<QObject*, ControlProperties> m_senderWidgetToControl;
-
-
-    std::thread *m_paintThread;
-    bool m_paintThreadCancellationFlag;
-    std::mutex m_pausePaintingMutex;
+    QTabWidget *m_centralWidget;
 };
 
 

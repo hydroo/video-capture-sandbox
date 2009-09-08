@@ -18,3 +18,8 @@
 
 #include "FilterEditorTab.hpp"
 
+
+FilterEditorTab::FilterEditorTab(QWidget *parent) : QWidget(parent)
+{
+}
+

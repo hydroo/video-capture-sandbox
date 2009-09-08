@@ -17,7 +17,6 @@
  */
 
 #include "CaptureDevice.hpp"
-
 #include <cassert>
 #include <cstdlib>
 #include <cerrno>
