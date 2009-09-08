@@ -16,11 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef INPUT_DEVICES_TAB_HPP
-#define INPUT_DEVICES_TAB_HPP
+#ifndef CAPTURE_DEVICES_TAB_HPP
+#define CAPTURE_DEVICES_TAB_HPP
 
 
 #include "Prereqs.hpp"
 
-#endif /* INPUT_DEVICES_TAB_HPP */
+#endif /* CAPTURE_DEVICES_TAB_HPP */
 
