@@ -47,11 +47,17 @@ OBJECTS_DIR = tmp/
 DEFINES += 
 
 HEADERS += ./src/CaptureDevice.hpp \
-           ./src/MainWindow.hpp
+           ./src/FilterEditorTab.hpp \
+           ./src/InputDevicesTab.hpp \
+           ./src/MainWindow.hpp \
+           ./src/ViewsTab.hpp
 
 SOURCES += ./src/CaptureDevice.cpp \
+           ./src/FilterEditorTab.cpp \
+           ./src/InputDevicesTab.cpp \
            ./src/main.cpp \
-           ./src/MainWindow.cpp
+           ./src/MainWindow.cpp \
+           ./src/ViewsTab.cpp
 
 #include(enable-vampirtrace.pri)
 
