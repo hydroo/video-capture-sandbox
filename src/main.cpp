@@ -17,7 +17,6 @@
  */
 
 #include "Prereqs.hpp"
-
 #include <cassert>
 #include <iostream>
 #include <list>
@@ -25,7 +24,6 @@
 #include <QApplication>
 #include "CaptureDevice.hpp"
 #include "MainWindow.hpp"
-
 
 using namespace std;
 

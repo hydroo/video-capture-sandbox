@@ -20,7 +20,6 @@
 #define CAPTURE_DEVICE_HPP
 
 #include "Prereqs.hpp"
-
 #include <ctime>
 #include <deque>
 #include <linux/videodev2.h>

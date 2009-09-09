@@ -23,6 +23,7 @@
 #include "Prereqs.hpp"
 #include <QWidget>
 
+
 class FilterEditorTab : public QWidget
 {
     Q_OBJECT

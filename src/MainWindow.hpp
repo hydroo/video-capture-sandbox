@@ -26,6 +26,7 @@
 class QTabWidget;
 class CaptureDevice;
 
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
