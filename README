@@ -2,11 +2,10 @@ Requirements:
 
     Programs/Libs:
     - libv4l >= 0.6.1 http://people.atrpms.net/~hdegoede/
-    - gcc >= 4.4
+    - newest gcc release (4.4.1 at the moment)
     - libqt4-dev
-
-    Things needed:
-    - nothing
+    - libboost-dev >= 1.35
+    - libloki-dev >= 0.1.5
 
 Install:
     $ qmake
