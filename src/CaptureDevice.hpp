@@ -68,7 +68,6 @@ public:
 
     /**
      * @returns true on success, false on failure
-     * @param buffersCount Number of buffers for storing images into in the queue. Has to be greater than 1.
      *
      * @note on failure, finish() is called implicitly
      */

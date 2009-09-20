@@ -759,7 +759,7 @@ list<v4l2_querymenu> CaptureDevice::menus(const struct v4l2_queryctrl& ctl)
 
 /* *** static functions ***************************************************** */
 void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
-        CaptureDevice* camera, pair<double,double>* ret)
+        CaptureDevice* camera, std::pair<double,double>* ret)
 {
     int fileDescriptor = camera->m_fileDescriptor;
     unsigned int bufferSize = camera->m_bufferSize;
