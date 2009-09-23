@@ -38,6 +38,9 @@ using namespace std;
 
 
 CaptureDevice::CaptureDevice() :
+        m_captureHeight(0),
+        m_captureWidth(0),
+        m_bufferCount(2),
         m_fileDescriptor(-1),
         m_captureThread(0),
         m_capturingPaused(false)
@@ -53,61 +56,64 @@ CaptureDevice::~CaptureDevice()
 }
 
 
-const string& CaptureDevice::fileName() const
+unsigned int CaptureDevice::bufferSize() const
 {
-    return m_deviceFileName;
+    return m_bufferSize;
+}
+
+
+void CaptureDevice::setCaptureSize(unsigned int width, unsigned int height)
+{
+    assert(width > 0);
+    assert(height > 0);
+
+    m_captureWidth = width;
+    m_captureHeight = height;
 }
 pair<unsigned int, unsigned int> CaptureDevice::captureSize() const
 {
     return make_pair(m_captureWidth, m_captureHeight);
 }
-__u32 CaptureDevice::pixelFormat() const
+
+
+void CaptureDevice::setFileName(const std::string& name)
 {
-    return m_pixelFormat;
+    assert(name.empty() == false);
+
+    m_fileName = name;
 }
-string CaptureDevice::pixelFormatString() const
+const string &CaptureDevice::fileName() const
 {
-    string ret;
-    ret.push_back((char) ((m_pixelFormat & 0x000000ff) >> 0));
-    ret.push_back((char) ((m_pixelFormat & 0x0000ff00) >> 8));
-    ret.push_back((char) ((m_pixelFormat & 0x00ff0000) >> 16));
-    ret.push_back((char) ((m_pixelFormat & 0xff000000) >> 24));
-    return  ret;
-}
-enum v4l2_field CaptureDevice::fieldFormat() const
-{
-    return m_fieldFormat;
-}
-unsigned int CaptureDevice::bufferSize() const
-{
-    return m_bufferSize;
-}
-clockid_t CaptureDevice::clockId() const
-{
-    return m_timerClockId;
+    return m_fileName;
 }
 
 
-bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsigned int captureWidth,
-        unsigned int captureHeight, unsigned int buffersCount, clockid_t clockId)
+void CaptureDevice::setBufferCount(unsigned int count)
+{
+    assert(count > 1);
+
+    m_bufferCount = count;
+}
+unsigned int CaptureDevice::bufferCount() const
+{
+    return m_bufferCount;
+}
+
+
+bool CaptureDevice::init()
 {
     // cerr << __PRETTY_FUNCTION__ << endl;
+    assert(m_fileName.empty() == false);
+    assert(m_captureWidth > 0);
+    assert(m_captureHeight > 0);
     assert(m_fileDescriptor == -1);
-    assert(buffersCount > 1);
+    assert(m_bufferCount > 1);
 
-
-    m_captureHeight = captureHeight;
-    m_captureWidth = captureWidth;
-    m_deviceFileName = deviceFileName;
-    m_fieldFormat = V4L2_FIELD_NONE;
-    m_pixelFormat = pixelFormat;
-    m_timerClockId = clockId;
     m_captureThreadCancellationFlag = false;
 
-
     /* *** initialize timer *** */
-    int clockret = clock_gettime(m_timerClockId, &m_timerStart);
-    clock_getres(m_timerClockId, &m_timerResolution);
+    int clockret = clock_gettime(CLOCK_MONOTONIC, &m_timerStart);
+    clock_getres(CLOCK_MONOTONIC, &m_timerResolution);
     gettimeofday(&m_realStartTime, 0);
 
     if (clockret == -1) {
@@ -124,7 +130,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
     /* *** open the device file *** */
     struct stat st;
 
-    if (stat(m_deviceFileName.c_str(), &st) == -1) {
+    if (stat(m_fileName.c_str(), &st) == -1) {
         cerr << __PRETTY_FUNCTION__ << " Cannot identify file. " << errno << " " << strerror(errno) << endl;
         finish(); return false;
     }
@@ -135,7 +141,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
     }
 
     m_fileAccessMutex.lock();
-    m_fileDescriptor = v4l2_open(m_deviceFileName.c_str(), O_RDWR|O_NONBLOCK);
+    m_fileDescriptor = v4l2_open(m_fileName.c_str(), O_RDWR|O_NONBLOCK);
     m_fileAccessMutex.unlock();
 
     if (m_fileDescriptor == -1) {
@@ -157,12 +163,12 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
         }
     }
 
-    if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
+    if (!(cap.capabilities  &V4L2_CAP_VIDEO_CAPTURE)) {
         cerr << "File is no video capture device." << endl;
         finish(); return false;
     }
 
-    if (!(cap.capabilities & V4L2_CAP_READWRITE)) {
+    if (!(cap.capabilities  &V4L2_CAP_READWRITE)) {
         cerr << "File does not support read i/o." << endl;
         finish(); return false;
     }
@@ -186,8 +192,8 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     fmt.fmt.pix.width = m_captureWidth;
     fmt.fmt.pix.height = m_captureHeight;
-    fmt.fmt.pix.pixelformat = m_pixelFormat;
-    fmt.fmt.pix.field = m_fieldFormat;
+    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
+    fmt.fmt.pix.field = V4L2_FIELD_NONE;
 
     if (xv4l2_ioctl(m_fileDescriptor, VIDIOC_S_FMT, &fmt) == -1) {
         cerr << __PRETTY_FUNCTION__ << " VIDIOC_S_FMT " << errno << " " << strerror(errno) << endl;
@@ -195,20 +201,18 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
     }
 
     if (fmt.fmt.pix.width != m_captureWidth || fmt.fmt.pix.height != m_captureHeight ||
-            fmt.fmt.pix.pixelformat != m_pixelFormat ||
-            fmt.fmt.pix.field != m_fieldFormat) {
+            fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_RGB24 ||
+            fmt.fmt.pix.field != V4L2_FIELD_NONE) {
 
         cerr << "Your parameters were changed: "
                 << m_captureWidth << "x" << m_captureHeight << " in "
-                << pixelFormatString() << ", fieldFormat " << m_fieldFormat << " -> ";
+                << pixelFormatString(V4L2_PIX_FMT_RGB24) << ", fieldFormat " << V4L2_FIELD_NONE << " -> ";
 
         m_captureWidth = fmt.fmt.pix.width;
         m_captureHeight = fmt.fmt.pix.height;
-        m_pixelFormat = fmt.fmt.pix.pixelformat;
-        m_fieldFormat = fmt.fmt.pix.field;
 
         cerr << m_captureWidth << "x" << m_captureHeight << " in "
-                << pixelFormatString() << ", fieldFormat " << m_fieldFormat << endl;
+                << pixelFormatString(fmt.fmt.pix.pixelformat) << ", fieldFormat " << fmt.fmt.pix.field<< endl;
     }
 
 
@@ -224,7 +228,7 @@ bool CaptureDevice::init(const string& deviceFileName, __u32 pixelFormat, unsign
     m_bufferSize = fmt.fmt.pix.sizeimage;
 
     /* *** allocate buffers *** */
-    for (unsigned int a=0; a < buffersCount; ++a) {
+    for (unsigned int a=0; a < m_bufferCount; ++a) {
         m_buffers.push_front(Buffer());
 
         m_buffers.front().time = {numeric_limits<time_t>::min(), 0};
@@ -314,8 +318,8 @@ void CaptureDevice::printControls()
 
     pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > ctlsAndMenus = controls();
 
-    const list<struct v4l2_queryctrl>& ctls = ctlsAndMenus.first;
-    const list<struct v4l2_querymenu>& menus = ctlsAndMenus.second;
+    const list<struct v4l2_queryctrl> &ctls = ctlsAndMenus.first;
+    const list<struct v4l2_querymenu> &menus = ctlsAndMenus.second;
 
     cout << "Available Controls:" << endl;
     for (auto it = ctls.begin(); it != ctls.end(); ++it) {
@@ -535,7 +539,7 @@ deque<const CaptureDevice::Buffer*> CaptureDevice::lockFirstNBuffers(unsigned in
 }
 
 
-void CaptureDevice::unlock(const deque<const Buffer*>& buffers)
+void CaptureDevice::unlock(const deque<const Buffer*> &buffers)
 {
     m_timelySortedBuffersMutex.lock();
     for (auto it = buffers.begin(); it != buffers.end(); ++it) {
@@ -551,7 +555,7 @@ void CaptureDevice::unlock(const deque<const Buffer*>& buffers)
 }
 
 
-unsigned int CaptureDevice::newerBuffersAvailable(const timespec& newerThan)
+unsigned int CaptureDevice::newerBuffersAvailable(const timespec &newerThan)
 {
     unsigned int ret = 0;
     auto it = m_timelySortedBuffers.begin();
@@ -598,7 +602,7 @@ void CaptureDevice::stopCapturing()
     if (m_captureThread != 0) {
         assert(m_captureThread->joinable() == true);
 
-        if (capturingPaused() == true) pauseCapturing(false);
+        if (isCapturingPaused() == true) pauseCapturing(false);
 
         m_captureThreadCancellationFlag = true;
         m_captureThread->join();
@@ -630,7 +634,7 @@ void CaptureDevice::pauseCapturing(bool pause)
 }
 
 
-bool CaptureDevice::capturingPaused() const
+bool CaptureDevice::isCapturingPaused() const
 {
     return m_capturingPaused;
 }
@@ -673,7 +677,7 @@ pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > CaptureDevice::c
 }
 
 
-bool CaptureDevice::control(struct v4l2_control& ctl)
+bool CaptureDevice::control(struct v4l2_control &ctl)
 {
     bool ret;
     /* which errors VIDIOC_G_CTRL can throw:
@@ -694,7 +698,7 @@ bool CaptureDevice::control(struct v4l2_control& ctl)
 }
 
 
-bool CaptureDevice::setControl(const struct v4l2_control& ctl)
+bool CaptureDevice::setControl(const struct v4l2_control &ctl)
 {
     bool ret;
     struct v4l2_control copiedCtl = ctl;
@@ -712,7 +716,7 @@ bool CaptureDevice::setControl(const struct v4l2_control& ctl)
 }
 
 
-bool CaptureDevice::queryControl(struct v4l2_queryctrl& ctl)
+bool CaptureDevice::queryControl(struct v4l2_queryctrl &ctl)
 {
     bool ret = false;
 
@@ -735,7 +739,7 @@ bool CaptureDevice::queryControl(struct v4l2_queryctrl& ctl)
 }
 
 
-list<v4l2_querymenu> CaptureDevice::menus(const struct v4l2_queryctrl& ctl)
+list<v4l2_querymenu> CaptureDevice::menus(const struct v4l2_queryctrl &ctl)
 {
     list<struct v4l2_querymenu> ret;
 
@@ -759,13 +763,12 @@ list<v4l2_querymenu> CaptureDevice::menus(const struct v4l2_queryctrl& ctl)
 
 /* *** static functions ***************************************************** */
 void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
-        CaptureDevice* camera, std::pair<double,double>* ret)
+        CaptureDevice *camera, std::pair<double,double> *ret)
 {
     int fileDescriptor = camera->m_fileDescriptor;
     unsigned int bufferSize = camera->m_bufferSize;
-    clockid_t clockId = camera->m_timerClockId;
     void *buffer = malloc(camera->m_bufferSize);
-    std::mutex& fileAccessMutex = camera->m_fileAccessMutex;
+    std::mutex &fileAccessMutex = camera->m_fileAccessMutex;
     fd_set filedescriptorset;
     struct timeval tv;
     int sel;
@@ -775,7 +778,7 @@ void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
 
     for (;;) {
         times.resize(times.size()+1);
-        clock_gettime(clockId, &times.back());
+        clock_gettime(CLOCK_MONOTONIC, &times.back());
 
         if (difftime(times.back().tv_sec, times.front().tv_sec) > secondsToIterate) {
             break;
@@ -787,7 +790,7 @@ void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
         tv.tv_usec = 0;
 
         /* watch the file handle for new readable data */
-        sel = select(fileDescriptor + 1, &filedescriptorset, NULL, NULL, &tv);
+        sel = select(fileDescriptor + 1, &filedescriptorset, 0, 0, &tv);
 
         if (sel == -1 && errno != EINTR) {
             cerr << __PRETTY_FUNCTION__ << " Select error. " << errno << " " << strerror(errno) << endl;
@@ -838,15 +841,14 @@ void CaptureDevice::determineCapturePeriodThread(double secondsToIterate,
 }
 
 
-void CaptureDevice::captureThread(CaptureDevice* camera)
+void CaptureDevice::captureThread(CaptureDevice *camera)
 {
     int fileDescriptor = camera->m_fileDescriptor;
     unsigned int bufferSize = camera->m_bufferSize;
-    clockid_t clockId = camera->m_timerClockId;
-    std::deque<Buffer*>& sortedBuffers = camera->m_timelySortedBuffers;
-    std::mutex& sortedBuffersMutex =  camera->m_timelySortedBuffersMutex;
-    std::mutex& fileAccessMutex = camera->m_fileAccessMutex;
-    std::mutex& pauseCapturingMutex = camera->m_pauseCapturingMutex;
+    std::deque<Buffer*> &sortedBuffers = camera->m_timelySortedBuffers;
+    std::mutex &sortedBuffersMutex =  camera->m_timelySortedBuffersMutex;
+    std::mutex &fileAccessMutex = camera->m_fileAccessMutex;
+    std::mutex &pauseCapturingMutex = camera->m_pauseCapturingMutex;
     fd_set filedescriptorset;
     struct timeval tv;
     int sel;
@@ -865,7 +867,7 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
 
         /* watch the file handle for new readable data */
         fileAccessMutex.lock();
-        sel = select(fileDescriptor + 1, &filedescriptorset, NULL, NULL, &tv);
+        sel = select(fileDescriptor + 1, &filedescriptorset, 0, 0, &tv);
         fileAccessMutex.unlock();
 
         if (sel == -1 && errno != EINTR) {
@@ -883,14 +885,14 @@ void CaptureDevice::captureThread(CaptureDevice* camera)
             cerr << "no writeable buffer present. trying hard" << endl;
             continue;
         }
-        Buffer* buffer = sortedBuffers.back();
+        Buffer *buffer = sortedBuffers.back();
         sortedBuffers.pop_back();
 
         sortedBuffersMutex.unlock();
 
 
         /* read from the device into the buffer */
-        clock_gettime(clockId, &(buffer->time));
+        clock_gettime(CLOCK_MONOTONIC, &(buffer->time));
         fileAccessMutex.lock();
         readlen = v4l2_read(fileDescriptor, buffer->buffer, bufferSize);
         fileAccessMutex.unlock();
@@ -933,5 +935,16 @@ int CaptureDevice::xv4l2_ioctl(int fileDescriptor, int request, void *arg)
     m_fileAccessMutex.unlock();
 
     return r;
+}
+
+
+string CaptureDevice::pixelFormatString(__u32 pixelFormat)
+{
+    string ret;
+    ret.push_back((char) ((pixelFormat & 0x000000ff) >> 0));
+    ret.push_back((char) ((pixelFormat & 0x0000ff00) >> 8));
+    ret.push_back((char) ((pixelFormat & 0x00ff0000) >> 16));
+    ret.push_back((char) ((pixelFormat & 0xff000000) >> 24));
+    return  ret;
 }
 
