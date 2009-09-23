@@ -16,31 +16,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef MAIN_WINDOW_HPP
-#define MAIN_WINDOW_HPP
-
-#include "Prereqs.hpp"
-#include <list>
-#include <QMainWindow>
-
-class QTabWidget;
-class CaptureDevice;
+#ifndef VIEWS_TAB_HPP
+#define VIEWS_TAB_HPP
 
 
-class MainWindow : public QMainWindow
+#include "prereqs.hpp"
+#include <QWidget>
+
+
+class ViewsTab : public QWidget
 {
     Q_OBJECT
-
 public:
-
-    MainWindow(QWidget *parent, std::list<CaptureDevice*> captureDevices);
-    ~MainWindow();
-
-private:
-
-    QTabWidget *m_centralWidget;
+    ViewsTab(QWidget *parent);
 };
 
 
-#endif /* MAIN_WINDOW_HPP */
+#endif /* VIEWS_TAB_HPP */
 

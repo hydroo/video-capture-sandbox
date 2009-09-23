@@ -19,13 +19,13 @@
 #ifndef CAPTURE_DEVICES_TAB_HPP
 #define CAPTURE_DEVICES_TAB_HPP
 
-#include "Prereqs.hpp"
+#include "prereqs.hpp"
 #include <list>
 #include <mutex>
 #include <QImage>
 #include <QMap>
 #include <QWidget>
-#include "CaptureDevice.hpp"
+#include "capturedevice.hpp"
 
 class QGroupBox;
 class QHBoxLayout;

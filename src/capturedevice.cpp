@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#include "CaptureDevice.hpp"
+#include "capturedevice.hpp"
 #include <cassert>
 #include <cstdlib>
 #include <cerrno>

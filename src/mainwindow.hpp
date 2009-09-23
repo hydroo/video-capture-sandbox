@@ -16,21 +16,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef FILTER_EDITOR_TAB_HPP
-#define FILTER_EDITOR_TAB_HPP
+#ifndef MAIN_WINDOW_HPP
+#define MAIN_WINDOW_HPP
+
+#include "prereqs.hpp"
+#include <list>
+#include <QMainWindow>
+
+class QTabWidget;
+class CaptureDevice;
 
 
-#include "Prereqs.hpp"
-#include <QWidget>
-
-
-class FilterEditorTab : public QWidget
+class MainWindow : public QMainWindow
 {
     Q_OBJECT
+
 public:
-    FilterEditorTab(QWidget *parent);
+
+    MainWindow(QWidget *parent, std::list<CaptureDevice*> captureDevices);
+    ~MainWindow();
+
+private:
+
+    QTabWidget *m_centralWidget;
 };
 
 
-#endif /* FILTER_EDITOR_TAB_HPP */
+#endif /* MAIN_WINDOW_HPP */
 

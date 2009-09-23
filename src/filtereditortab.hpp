@@ -16,10 +16,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#include "ViewsTab.hpp"
+#ifndef FILTER_EDITOR_TAB_HPP
+#define FILTER_EDITOR_TAB_HPP
 
 
-ViewsTab::ViewsTab(QWidget *parent) : QWidget(parent)
+#include "prereqs.hpp"
+#include <QWidget>
+
+
+class FilterEditorTab : public QWidget
 {
-}
+    Q_OBJECT
+public:
+    FilterEditorTab(QWidget *parent);
+};
+
+
+#endif /* FILTER_EDITOR_TAB_HPP */
 

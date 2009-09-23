@@ -16,30 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#include "MainWindow.hpp"
-#include <list>
-#include <QTabWidget>
-#include "CaptureDevicesTab.hpp"
-#include "FilterEditorTab.hpp"
-#include "ViewsTab.hpp"
-
-using namespace std;
+#include "filtereditortab.hpp"
 
 
-MainWindow::MainWindow(QWidget *parent, list<CaptureDevice*> captureDevices) :
-        QMainWindow(parent)
-{
-    m_centralWidget = new QTabWidget(this);
-
-    m_centralWidget->addTab(new CaptureDevicesTab(m_centralWidget, captureDevices), tr("Capture Devices"));
-    m_centralWidget->addTab(new FilterEditorTab(m_centralWidget), tr("Filter Editor"));
-    m_centralWidget->addTab(new ViewsTab(m_centralWidget), tr("Views"));
-
-    setCentralWidget(m_centralWidget);
-}
-
-
-MainWindow::~MainWindow()
+FilterEditorTab::FilterEditorTab(QWidget *parent) : QWidget(parent)
 {
 }
 

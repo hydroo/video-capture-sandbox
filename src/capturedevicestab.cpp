@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#include "CaptureDevicesTab.hpp"
+#include "capturedevicestab.hpp"
 #include <cassert>
 #include <cmath>
 #include <functional>

@@ -16,21 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef VIEWS_TAB_HPP
-#define VIEWS_TAB_HPP
+#include "viewstab.hpp"
 
 
-#include "Prereqs.hpp"
-#include <QWidget>
-
-
-class ViewsTab : public QWidget
+ViewsTab::ViewsTab(QWidget *parent) : QWidget(parent)
 {
-    Q_OBJECT
-public:
-    ViewsTab(QWidget *parent);
-};
-
-
-#endif /* VIEWS_TAB_HPP */
+}
 

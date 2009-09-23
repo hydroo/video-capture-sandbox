@@ -16,14 +16,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#include "Prereqs.hpp"
+#include "prereqs.hpp"
 #include <cassert>
 #include <iostream>
 #include <list>
 #include <string>
 #include <QApplication>
-#include "CaptureDevice.hpp"
-#include "MainWindow.hpp"
+#include "capturedevice.hpp"
+#include "mainwindow.hpp"
 
 using namespace std;
 
@@ -66,7 +66,6 @@ int main(int argc, char **args)
 
             newCaptureDevice->printDeviceInfo();
             newCaptureDevice->printFormats();
-            newCaptureDevice->printTimerInformation();
             newCaptureDevice->printControls();
             cout << endl;
 
