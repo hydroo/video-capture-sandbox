@@ -63,7 +63,7 @@ CaptureDevicesTab::CaptureDevicesTab(QWidget *parent, list<CaptureDevice*> captu
     for (auto it = captureDevices.begin(); it != captureDevices.end(); ++it, ++loopCount) {
 
         m_captureDevices.push_back(PerCaptureDevice());
-        PerCaptureDevice& captureDevice = m_captureDevices.back();
+        PerCaptureDevice &captureDevice = m_captureDevices.back();
 
         captureDevice.device = *it;
         captureDevice.groupBox = new QGroupBox(tr("Camera %1").arg(loopCount), m_centralWidget);
@@ -177,7 +177,7 @@ void CaptureDevicesTab::updateAllDeviceControlsButtonClicked(bool checked)
     /* disable each capture device */
     list<bool> wasPaused;
     for (auto it = m_captureDevices.begin(); it != m_captureDevices.end(); ++it) {
-        if (it->device->capturingPaused() == true) {
+        if (it->device->isCapturingPaused() == true) {
             wasPaused.push_back(true);
         } else {
             wasPaused.push_back(false);
@@ -371,11 +371,11 @@ void CaptureDevicesTab::pausePaintThread(bool pause)
 }
 
 
-void CaptureDevicesTab::createCaptureDeviceControlWidgets(CaptureDevice* device, QWidget *widgetWhereToAddControlsTo)
+void CaptureDevicesTab::createCaptureDeviceControlWidgets(CaptureDevice *device, QWidget *widgetWhereToAddControlsTo)
 {
     const pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > cameraControls = device->controls();
-    const list<struct v4l2_queryctrl>& controls = cameraControls.first;
-    const list<struct v4l2_querymenu>& menuItems = cameraControls.second;
+    const list<struct v4l2_queryctrl> &controls = cameraControls.first;
+    const list<struct v4l2_querymenu> &menuItems = cameraControls.second;
 
 
     for (auto it = controls.begin(); it != controls.end(); ++it) {
@@ -463,7 +463,7 @@ void CaptureDevicesTab::createCaptureDeviceControlWidgets(CaptureDevice* device,
 
 void CaptureDevicesTab::paintThread(CaptureDevicesTab *window)
 {
-    std::mutex& pausePaintingMutex = window->m_pausePaintingMutex;
+    std::mutex &pausePaintingMutex = window->m_pausePaintingMutex;
     bool &m_paintThreadCancellationFlag = window->m_paintThreadCancellationFlag;
 
     /* init list of last image times */
@@ -492,7 +492,7 @@ void CaptureDevicesTab::paintThread(CaptureDevicesTab *window)
                 updateGUI = true;
 
                 deque<const CaptureDevice::Buffer*> buffers;
-                const CaptureDevice::Buffer* buffer = buffers[0];
+                const CaptureDevice::Buffer *buffer = buffers[0];
 
                 buffers = it->device->lockFirstNBuffers(1);
                 buffer = buffers[0];

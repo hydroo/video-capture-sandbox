@@ -58,8 +58,10 @@ int main(int argc, char **args)
             assert(width > 0);
             assert(height > 0);
 
-            bool initialized = newCaptureDevice->init(deviceFile, V4L2_PIX_FMT_RGB24,
-                    (unsigned int)width, (unsigned int)height);
+            newCaptureDevice->setFileName(deviceFile);
+            newCaptureDevice->setCaptureSize(width, height);
+
+            bool initialized = newCaptureDevice->init();
             assert(initialized);
 
             newCaptureDevice->printDeviceInfo();

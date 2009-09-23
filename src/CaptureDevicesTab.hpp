@@ -65,9 +65,9 @@ private:
     bool isPainting() const;
     void pausePaintThread(bool pause);
 
-    void createCaptureDeviceControlWidgets(CaptureDevice* device, QWidget *widgetWhereToAddControlsTo);
+    void createCaptureDeviceControlWidgets(CaptureDevice *device, QWidget *widgetWhereToAddControlsTo);
 
-    static void paintThread(CaptureDevicesTab* window);
+    static void paintThread(CaptureDevicesTab *window);
 
     QHBoxLayout *m_mainLayout;
     QVBoxLayout *m_globalButtonsLayout;

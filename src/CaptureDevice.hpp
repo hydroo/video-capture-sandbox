@@ -45,38 +45,38 @@ class CaptureDevice
 public:
 
     CaptureDevice();
+    /** @todo */
     CaptureDevice(const CaptureDevice&) = delete;
-    CaptureDevice& operator=(const CaptureDevice&) = delete;
+    /** @todo */
+    CaptureDevice(CaptureDevice&&) = delete;
+    /** @todo */
+    CaptureDevice &operator=(const CaptureDevice&) = delete;
+    /** @todo */
+    CaptureDevice &operator=(CaptureDevice&&) = delete;
     ~CaptureDevice();
 
-    /** corresponds to the 'clockId' passed to init() */
-    clockid_t clockId() const;
-    /** set programatically */
+    /** set programatically (approx width*height*byteperpixel) */
     unsigned int bufferSize() const;
-    /** possibly changed during initialization by the device */
-    std::pair<unsigned int, unsigned int> captureSize() const;
-    /** fixed value NONE, possibly changed during initialization by the device */
-    enum v4l2_field fieldFormat() const;
-    /** corresponds to the 'deviceFileName' passed to init() */
-    const std::string& fileName() const;
-    /** possibly changed during initialization by the device.
-        V4L2_PIX_FMT_* values from @see linux/videodev2.h */
-    __u32 pixelFormat() const;
-    /** returns the pixelFormat encoded as a 4 character string */
-    std::string pixelFormatString() const;
 
+    /** @note possibly changed during initialization by the device */
+    void setCaptureSize(unsigned int width, unsigned int height);
+    std::pair<unsigned int, unsigned int> captureSize() const;
+
+    void setFileName(const std::string&);
+    const std::string &fileName() const;
+
+    /** number of buffers in the ring used for storing images. Default: 2 */
+    void setBufferCount(unsigned int);
+    unsigned int bufferCount() const;
 
     /**
+     * @pre captureSize() has to be set
+     * @pre fileName() has to be set
      * @returns true on success, false on failure
      *
      * @note on failure, finish() is called implicitly
      */
-    bool init(const std::string& deviceFileName,
-            __u32 m_pixelFormat,
-            unsigned int captureWidth,
-            unsigned int captureHeight,
-            unsigned int buffersCount = 2,
-            clockid_t clockId = CLOCK_MONOTONIC);
+    bool init();
 
     void finish();
 
@@ -97,26 +97,23 @@ public:
 
     /** n has to be less than  'buffersCount' */
     std::deque<const Buffer*> lockFirstNBuffers(unsigned int n);
-    void unlock(const std::deque<const Buffer*>& buffers);
+    void unlock(const std::deque<const Buffer*> &buffers);
     /** @returns number of newer buffers
         @note
         When actually locking the buffer this number might differ due to threading.
         It can be larger, or it can be n-1, when previously n */
-    unsigned int newerBuffersAvailable(const timespec& newerThan);
+    unsigned int newerBuffersAvailable(const timespec &newerThan);
 
     /** @returns average period for capturing an image and the standard deviation
         @note blocks for several seconds */
     std::pair<double, double> determineCapturePeriod(double secondsToIterate = 5.0);
 
-    /** creates the capture thread */
     void startCapturing();
-    /** blocks until the capture thread is joined */
     void stopCapturing();
-    /** @returns wether the capture thread has been created */
     bool isCapturing() const;
 
     void pauseCapturing(bool pause);
-    bool capturingPaused() const;
+    bool isCapturingPaused() const;
 
     /** @returns all controls and control menu items, which the capture device provides
         @see http://www.linuxtv.org/downloads/video4linux/API/V4L2_API/spec-single/v4l2.html#V4L2-QUERYCTRL
@@ -134,25 +131,26 @@ private:
     bool queryControl(struct v4l2_queryctrl&);
     std::list<struct v4l2_querymenu> menus(const struct v4l2_queryctrl&);
 
-    static void captureThread(CaptureDevice* camera);
+    static void captureThread(CaptureDevice *camera);
     static void determineCapturePeriodThread(double, CaptureDevice*,
             std::pair<double,double>*);
 
     int xv4l2_ioctl(int fileDescriptor, int request, void *arg);
 
+    static std::string pixelFormatString(__u32 pixelFormat);
+
+
     unsigned int m_captureHeight;
     unsigned int m_captureWidth;
-    int m_fileDescriptor;
-    enum v4l2_field m_fieldFormat;
-    std::string m_deviceFileName;
-    __u32 m_pixelFormat;
+    std::string m_fileName;
+    unsigned int m_bufferCount;
 
+    int m_fileDescriptor;
     unsigned int m_bufferSize;
     std::list<Buffer> m_buffers;
     std::deque<Buffer*> m_timelySortedBuffers;
     std::mutex m_timelySortedBuffersMutex;
 
-    clockid_t m_timerClockId;
     struct timespec m_timerResolution;
     struct timespec m_timerStart;
     struct timeval m_realStartTime;
