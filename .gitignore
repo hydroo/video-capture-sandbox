@@ -8,4 +8,5 @@ vimsession
 *.jpg
 *.jpeg
 *doxygen*
+*vimsession*
 
