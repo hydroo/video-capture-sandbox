@@ -629,7 +629,7 @@ pair<list<struct v4l2_queryctrl>, list<struct v4l2_querymenu> > CaptureDevice::c
     struct v4l2_queryctrl ctl;
 
     /* for each control ... */
-    for (__u32 id = V4L2_CID_BASE; id < V4L2_CID_LASTP1; id++) {
+    for (__u32 id = V4L2_CID_BASE; id < V4L2_CID_LASTP1; ++id) {
         ctl.id = id;
         if (queryControl(ctl) == true) {
             ret.first.push_back(ctl);
@@ -702,7 +702,7 @@ bool CaptureDevice::queryControl(struct v4l2_queryctrl &ctl)
 {
     bool ret = false;
 
-    /* clear the incomming structure - better save than sorry */
+    /* clear the incoming structure - better save than sorry */
     __u32 id = ctl.id;
     memset (&ctl, 0, sizeof(v4l2_queryctrl));
     ctl.id = id;
@@ -729,7 +729,7 @@ list<v4l2_querymenu> CaptureDevice::menus(const struct v4l2_queryctrl &ctl)
     memset (&menu, 0, sizeof (v4l2_querymenu));
     menu.id = ctl.id;
 
-    for (menu.index = ctl.minimum; ((__s32) menu.index) <= ctl.maximum; menu.index++) {
+    for (menu.index = ctl.minimum; ((__s32) menu.index) <= ctl.maximum; ++menu.index) {
 
         if (xv4l2_ioctl(m_fileDescriptor, VIDIOC_QUERYMENU, &menu) == 0) {
             ret.push_back(menu);
