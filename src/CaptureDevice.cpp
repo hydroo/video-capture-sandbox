@@ -404,7 +404,7 @@ void CaptureDevice::printFormats()
             { V4L2_PIX_FMT_YUV422P, "V4L2_PIX_FMT_YUV422P" },
             { V4L2_PIX_FMT_YUV411P, "V4L2_PIX_FMT_YUV411P" },
             { V4L2_PIX_FMT_Y41P, "V4L2_PIX_FMT_Y41P" },
-            { V4L2_PIX_FMT_YUV444, "" },
+            { V4L2_PIX_FMT_YUV444, "V4L2_PIX_FMT_YUV444" },
             { V4L2_PIX_FMT_YUV555, "V4L2_PIX_FMT_YUV555" },
             { V4L2_PIX_FMT_YUV565, "V4L2_PIX_FMT_YUV565" },
             { V4L2_PIX_FMT_YUV32, "V4L2_PIX_FMT_YUV32" },
@@ -499,24 +499,6 @@ void CaptureDevice::printFormats()
 
         ++formatIndex;
     }
-}
-
-
-void CaptureDevice::printTimerInformation() const
-{
-    struct tm *localTime = localtime(&m_realStartTime.tv_sec);
-
-    cout << "Start Time: "
-            << setw(2) << setfill('0') << localTime->tm_year-100
-            << setw(2) << setfill('0') << localTime->tm_mon+1
-            << setw(2) << setfill('0') << localTime->tm_mday
-            << " "
-            << setw(2) << setfill('0') << localTime->tm_hour
-            << ":"
-            << setw(2) << setfill('0') << localTime->tm_min << endl;
-
-    cout << "Timer Resolution: " << (double) m_timerResolution.tv_sec << "s "
-            << m_timerResolution.tv_nsec << "nsec" << endl;
 }
 
 

@@ -44,16 +44,21 @@ class CaptureDevice
 {
 public:
 
+    struct Buffer
+    {
+        timespec time;
+        /** if 0 -> writeable, readable; if > 0 -> readable */
+        int readerCount;
+        unsigned char *buffer;
+    };
+
+
     CaptureDevice();
-    /** @todo */
     CaptureDevice(const CaptureDevice&) = delete;
-    /** @todo */
     CaptureDevice(CaptureDevice&&) = delete;
-    /** @todo */
-    CaptureDevice &operator=(const CaptureDevice&) = delete;
-    /** @todo */
-    CaptureDevice &operator=(CaptureDevice&&) = delete;
     ~CaptureDevice();
+    CaptureDevice &operator=(const CaptureDevice&) = delete;
+    CaptureDevice &operator=(CaptureDevice&&) = delete;
 
     /** set programatically (approx width*height*byteperpixel) */
     unsigned int bufferSize() const;
@@ -80,20 +85,6 @@ public:
 
     void finish();
 
-
-    void printDeviceInfo();
-    void printControls();
-    void printFormats();
-    void printTimerInformation() const;
-
-    
-    struct Buffer
-    {
-        timespec time;
-        /** if 0 -> writeable, readable; if > 0 -> readable */
-        int readerCount;
-        unsigned char *buffer;
-    };
 
     /** n has to be less than  'buffersCount' */
     std::deque<const Buffer*> lockFirstNBuffers(unsigned int n);
@@ -125,6 +116,11 @@ public:
     bool control(struct v4l2_control&);
     /** @returns true if the call succeeded - more sophisticated error checking to come */
     bool setControl(const struct v4l2_control&);
+
+
+    void printDeviceInfo();
+    void printControls();
+    void printFormats();
 
 private:
 
