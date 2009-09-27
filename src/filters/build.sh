@@ -18,18 +18,25 @@ fi
 for SOURCE in ${SOURCES};
 do
     EXTENSION=`echo "$SOURCE" | sed 's/.*\.cpp/cpp/g' | sed 's/.*\.c/c/g'`
-    SOURCE_WITHOUT_EXTENSION=`echo "${SOURCE}" | sed -e 's/\.cpp//g' -e 's/\.c//g'`
+    SOURCE_WITHOUT_EXTENSION=`echo "$SOURCE" | sed -e 's/\.cpp//g' -e 's/\.c//g'`
     TARGET_WITH_PATH="${TARGET_DIRECTORY}/lib${SOURCE_WITHOUT_EXTENSION}.so"
     SOURCE_WITH_PATH=${SCRIPT_DIRECTORY}/${SOURCE}
 
-    if [ "$EXTENSION" == "cpp" ]; then
-        echo "g++ -shared -fPIC ${SOURCE_WITH_PATH} -o ${TARGET_WITH_PATH}"
-        g++ -shared -fPIC ${SOURCE_WITH_PATH} -o ${TARGET_WITH_PATH}
-    elif [ "$EXTENSION" == "c" ]; then
-        echo "gcc -shared -fPIC ${SOURCE_WITH_PATH} -o ${TARGET_WITH_PATH}"
-        gcc -shared -fPIC ${SOURCE_WITH_PATH} -o ${TARGET_WITH_PATH}
-    else
-        echo "unrecognized extenstion $EXTENSION $SOURCE"
+    SOURCE_MODIFICATION_TIME=`stat -c "%Y" $SOURCE_WITH_PATH`
+    TARGET_MODIFICATION_TIME=`stat -c "%Y" $TARGET_WITH_PATH`
+
+    if [ "$SOURCE_MODIFICATION_TIME" -ge "$TARGET_MODIFICATION_TIME" ]; then
+
+        if [ "$EXTENSION" == "cpp" ]; then
+            echo "g++ -shared -fPIC ${SOURCE_WITH_PATH} -o ${TARGET_WITH_PATH}"
+            g++ -shared -fPIC ${SOURCE_WITH_PATH} -o ${TARGET_WITH_PATH}
+        elif [ "$EXTENSION" == "c" ]; then
+            echo "gcc -shared -fPIC ${SOURCE_WITH_PATH} -o ${TARGET_WITH_PATH}"
+            gcc -shared -fPIC ${SOURCE_WITH_PATH} -o ${TARGET_WITH_PATH}
+        else
+            echo "unrecognized extenstion $EXTENSION $SOURCE"
+        fi
+
     fi
 done
 
