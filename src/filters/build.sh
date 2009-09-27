@@ -1,7 +1,7 @@
 #! /bin/bash
 
-SCRIPT_DIRECTORY=`echo $0 | sed 's/\/[^\/]*$//g'`
-SOURCES=`ls ${SCRIPT_DIRECTORY} | grep -e "\.cpp$" -e "\.c$"`
+SCRIPT_DIRECTORY=$(echo $0 | sed 's/\/[^\/]*$//g')
+SOURCES=$(ls ${SCRIPT_DIRECTORY} | grep -e "\.cpp$" -e "\.c$")
 
 TARGET=$1
 #compile only one file if a target has been specified
@@ -17,13 +17,13 @@ fi
 
 for SOURCE in ${SOURCES};
 do
-    EXTENSION=`echo "$SOURCE" | sed 's/.*\.cpp/cpp/g' | sed 's/.*\.c/c/g'`
-    SOURCE_WITHOUT_EXTENSION=`echo "$SOURCE" | sed -e 's/\.cpp//g' -e 's/\.c//g'`
+    EXTENSION=$(echo "$SOURCE" | sed 's/.*\.cpp/cpp/g' | sed 's/.*\.c/c/g')
+    SOURCE_WITHOUT_EXTENSION=$(echo "$SOURCE" | sed -e 's/\.cpp//g' -e 's/\.c//g')
     TARGET_WITH_PATH="${TARGET_DIRECTORY}/lib${SOURCE_WITHOUT_EXTENSION}.so"
     SOURCE_WITH_PATH=${SCRIPT_DIRECTORY}/${SOURCE}
 
-    SOURCE_MODIFICATION_TIME=`stat -c "%Y" $SOURCE_WITH_PATH`
-    TARGET_MODIFICATION_TIME=`stat -c "%Y" $TARGET_WITH_PATH`
+    SOURCE_MODIFICATION_TIME=$(stat -c "%Y" $SOURCE_WITH_PATH)
+    TARGET_MODIFICATION_TIME=$(stat -c "%Y" $TARGET_WITH_PATH)
 
     if [ "$SOURCE_MODIFICATION_TIME" -ge "$TARGET_MODIFICATION_TIME" ]; then
 
