@@ -18,12 +18,10 @@
 
 QMAKE_EXTRA_TARGETS += filters
 
-filters.target = filters
 filters.commands = src/filters/build.sh
 
 
 QMAKE_EXTRA_TARGETS += filtersclean
 
-filtersclean.target = filtersclean
 filtersclean.commands = src/filters/build.sh clean
 
