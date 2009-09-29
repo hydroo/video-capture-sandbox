@@ -16,6 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 
+TARGET = videocapture
+TEMPLATE = app
+DESTDIR = .
+
 QMAKE_CXX = g++-4.4
 QMAKE_CXXFLAGS = -std=c++0x
 QMAKE_CC = gcc-4.4
@@ -23,28 +27,25 @@ QMAKE_CFLAGS =
 QMAKE_LINK = g++-4.4
 QMAKE_LFLAGS = -std=c++0x
 
-TEMPLATE = app
-
-DESTDIR = .
-TARGET = videocapture
-
 CONFIG += warn_on debug
 
 CONFIG += link_pkgconfig
 PKGCONFIG += libv4l2
 
-#insert library paths here
-DEPENDPATH +=
+
+DEFINES += 
 
 INCLUDEPATH += ./src
+
+DEPENDPATH +=
 LIBS += -lrt
+
 
 MOC_DIR = tmp/
 UI_DIR = tmp/
 RCC_DIR = tmp/
 OBJECTS_DIR = tmp/
 
-DEFINES += 
 
 HEADERS += ./src/basefilter.hpp \
            ./src/capturedevice.hpp \
@@ -60,6 +61,9 @@ SOURCES += ./src/basefilter.cpp \
            ./src/main.cpp \
            ./src/mainwindow.cpp \
            ./src/viewstab.cpp
+
+
+include(filters.pri)
 
 #include(enable-vampirtrace.pri)
 
