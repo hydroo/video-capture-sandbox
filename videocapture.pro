@@ -46,13 +46,15 @@ OBJECTS_DIR = tmp/
 
 DEFINES += 
 
-HEADERS += ./src/capturedevice.hpp \
+HEADERS += ./src/basefilter.hpp \
+           ./src/capturedevice.hpp \
            ./src/capturedevicesTab.hpp \
            ./src/filtereditorTab.hpp \
            ./src/mainwindow.hpp \
            ./src/viewstab.hpp
 
-SOURCES += ./src/capturedevice.cpp \
+SOURCES += ./src/basefilter.cpp \
+           ./src/capturedevice.cpp \
            ./src/capturedevicesTab.cpp \
            ./src/filtereditortab.cpp \
            ./src/main.cpp \
