@@ -18,15 +18,21 @@
 
 #include "prereqs.hpp"
 
+#include "basefilter.hpp"
 #include "capturedevice.hpp"
 #include "mainwindow.hpp"
 
 #include <QApplication>
 
 #include <cassert>
+#include <cerrno>
 #include <iostream>
 #include <list>
 #include <string>
+
+#include <dirent.h>
+#include <dlfcn.h>
+#include <sys/types.h>
 
 using namespace std;
 
@@ -36,6 +42,13 @@ int main(int argc, char **args)
     VT
 
     QApplication app(argc, args);
+
+
+    string executablePath(args[0]);
+    string::size_type positionOfLastSlash = executablePath.find_last_of("/");
+    if (positionOfLastSlash != string::npos && positionOfLastSlash+1 < executablePath.length()
+            ) { executablePath.resize(positionOfLastSlash); }
+    else { /* can this happen? I dont know */ assert(0); }
 
 
     /* transform the arg array into a nice list of strings */
@@ -87,6 +100,75 @@ int main(int argc, char **args)
         }
     }
     /* evaluate arguments end */
+
+    list<BaseFilter*> filters;
+    /* load filters */
+
+
+    list<string> filterSearchDirectories;
+    filterSearchDirectories.push_back(".");
+    filterSearchDirectories.push_back(executablePath);
+
+    for (auto it = filterSearchDirectories.begin(); it != filterSearchDirectories.end(); ++it) {
+
+        cerr << *it << endl;
+
+        DIR *directoryHandle = opendir(it->c_str());
+
+        if (directoryHandle == 0) {
+            cerr << "Cannot open directory \"" << *it << "\" " << errno << " " << strerror(errno) << endl;
+            continue;
+        }
+
+        for(;;)
+        {
+            struct dirent *directoryEntry = readdir(directoryHandle);
+            if (directoryEntry == 0) break;
+
+            string fileName = *it + '/' + directoryEntry->d_name;
+
+            dlerror();
+            void *handle = dlopen(fileName.c_str(), RTLD_NOW);
+            if (handle == 0) {
+                cerr << "Cannot open library \"" << fileName << "\" " << dlerror() << endl; 
+                /* it is not a library */
+                continue;
+            }
+
+
+            dlerror();
+            createFilterFunction create = reinterpret_cast<createFilterFunction>(dlsym(handle, "create"));
+
+            if (create != 0) {
+                BaseFilter *newFilter = (*create)();
+                if (newFilter != 0) {
+                    filters.push_back(newFilter);
+                } else {
+                    /* create() returns 0 */
+                    cerr << "Cannot create filter instance \"" << fileName << "\" " << endl;
+                }
+                filters.push_back(newFilter);
+            } else {
+                /* it is a library, but has not the create() function */
+                cerr << "Cannot load library symbols \"" << fileName << "\" " << dlerror() << endl;
+            }
+
+
+            int dlcloseRet = dlclose(handle);
+            assert(dlcloseRet == 0);
+
+        }
+
+
+    }
+
+    for (auto it = filters.begin(); it != filters.end(); ++it) {
+        cout << *it << endl;
+    }
+
+    /* load filters end */
+
+
 
     MainWindow mainWindow(0, captureDevices);
     mainWindow.show();
