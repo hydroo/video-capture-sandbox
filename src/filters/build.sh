@@ -26,6 +26,9 @@ BUILD_CC="gcc-4.4"
 SCRIPT_DIRECTORY=$(dirname $0)
 SOURCES=$(ls $SCRIPT_DIRECTORY | grep -e "\.cpp$" -e "\.c$")
 
+#additional include paths
+INCLUDE="-I$SCRIPT_DIRECTORY/../"
+
 TARGET_DIRECTORY="."
 
 #"build"/"all", "clean"
@@ -63,7 +66,7 @@ do
                 else exit -1
                 fi
 
-                COMMAND="$CC -shared -fPIC $SOURCE_WITH_PATH -o $TARGET_WITH_PATH"
+                COMMAND="$CC -shared -fPIC $INCLUDE $SOURCE_WITH_PATH -o $TARGET_WITH_PATH"
 
             fi
         elif [ "$TARGET" == "clean" ]; then
