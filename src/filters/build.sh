@@ -41,13 +41,6 @@ fi
 for TARGET in $TARGETS;
 do
 
-    #validate target name
-    if [ $TARGET != "build" -a $TARGET != "all" -a $TARGET  != "clean" ]; then
-        echo "unknown target \"$TARGET\""
-        continue
-    fi
-
-
     for SOURCE in $SOURCES;
     do
         SOURCE_WITHOUT_EXTENSION=$(echo "$SOURCE" | sed -e 's/\.cpp//g' -e 's/\.c//g')
@@ -57,9 +50,10 @@ do
         COMMAND=""
 
         #determine command to be executed
-        if [ "$TARGET" == "build" -o "$TARGET" == "all" ]; then
+        if [ "$TARGET" == "build" -o "$TARGET" == "all" -o $TARGET == "$SOURCE" ]; then
 
-            if [ "$SOURCE_WITH_PATH" -nt "$TARGET_WITH_PATH" ]; then
+            if [ "$SOURCE_WITH_PATH" -nt "$TARGET_WITH_PATH" -o \
+                    $TARGET == "$SOURCE" ]; then
 
                 if [[ "$SOURCE" == *.cpp ]]; then CC=$BUILD_CXX
                 elif [[ "$SOURCE" == *.c ]]; then CC=$BUILD_CC
