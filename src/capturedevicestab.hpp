@@ -20,12 +20,15 @@
 #define CAPTURE_DEVICES_TAB_HPP
 
 #include "prereqs.hpp"
-#include <list>
-#include <mutex>
+
+#include "capturedevice.hpp"
+
 #include <QImage>
 #include <QMap>
 #include <QWidget>
-#include "capturedevice.hpp"
+
+#include <list>
+#include <mutex>
 
 class QGroupBox;
 class QHBoxLayout;

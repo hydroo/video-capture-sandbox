@@ -17,11 +17,15 @@
  */
 
 #include "mainwindow.hpp"
-#include <list>
-#include <QTabWidget>
+
 #include "capturedevicestab.hpp"
 #include "filtereditortab.hpp"
 #include "viewstab.hpp"
+
+#include <QTabWidget>
+
+#include <list>
+
 
 using namespace std;
 

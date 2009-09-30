@@ -17,22 +17,25 @@
  */
 
 #include "capturedevice.hpp"
+
 #include <cassert>
 #include <cstdlib>
 #include <cerrno>
 #include <cmath>
 #include <cstring>
-#include <fcntl.h>
 #include <functional>
 #include <iomanip>
 #include <iostream>
+#include <thread>
+#include <vector>
+
 #include <libv4l2.h>
+
+#include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <thread>
 #include <unistd.h>
-#include <vector>
 
 using namespace std;
 

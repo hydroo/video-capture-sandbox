@@ -20,8 +20,8 @@
 #define MAIN_WINDOW_HPP
 
 #include "prereqs.hpp"
-#include <list>
 #include <QMainWindow>
+#include <list>
 
 class QTabWidget;
 class CaptureDevice;

@@ -17,13 +17,16 @@
  */
 
 #include "prereqs.hpp"
+
+#include "capturedevice.hpp"
+#include "mainwindow.hpp"
+
+#include <QApplication>
+
 #include <cassert>
 #include <iostream>
 #include <list>
 #include <string>
-#include <QApplication>
-#include "capturedevice.hpp"
-#include "mainwindow.hpp"
 
 using namespace std;
 

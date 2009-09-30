@@ -20,14 +20,16 @@
 #define CAPTURE_DEVICE_HPP
 
 #include "prereqs.hpp"
+
 #include <ctime>
 #include <deque>
-#include <linux/videodev2.h>
 #include <list>
 #include <mutex>
 #include <string>
-#include <sys/time.h>
 #include <utility>
+
+#include <linux/videodev2.h>
+#include <sys/time.h>
 
 namespace std
 {

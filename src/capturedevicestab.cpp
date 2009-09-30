@@ -17,13 +17,7 @@
  */
 
 #include "capturedevicestab.hpp"
-#include <cassert>
-#include <cmath>
-#include <functional>
-#include <iostream>
-#include <linux/videodev2.h>
-#include <sstream>
-#include <thread>
+
 #include <QPainter>
 #include <QPaintEvent>
 #include <QCheckBox>
@@ -35,6 +29,15 @@
 #include <QSlider>
 #include <QtDebug>
 #include <QVBoxLayout>
+
+#include <cassert>
+#include <cmath>
+#include <functional>
+#include <iostream>
+#include <sstream>
+#include <thread>
+
+#include <linux/videodev2.h>
 
 using namespace std;
 
