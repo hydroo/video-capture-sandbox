@@ -28,6 +28,7 @@
 #include <cerrno>
 #include <iostream>
 #include <list>
+#include <set>
 #include <string>
 
 #include <dirent.h>
@@ -105,9 +106,9 @@ int main(int argc, char **args)
     /* load filters */
 
 
-    list<string> filterSearchDirectories;
-    filterSearchDirectories.push_back(".");
-    filterSearchDirectories.push_back(executablePath);
+    set<string> filterSearchDirectories;
+    filterSearchDirectories.insert(".");
+    filterSearchDirectories.insert(executablePath);
 
     for (auto it = filterSearchDirectories.begin(); it != filterSearchDirectories.end(); ++it) {
 
