@@ -16,20 +16,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
+#ifndef EXAMPLE_FILTER_HPP
+#define EXAMPLE_FILTER_HPP
+
+
 #include "basefilter.hpp"
-#include <iostream>
-
-using namespace std;
 
 
-BaseFilter::BaseFilter()
+
+BaseFilter* create();
+void destroy(BaseFilter*);
+
+
+class ExampleFilter : public BaseFilter
 {
-    cerr << __PRETTY_FUNCTION__ << endl;
-}
+public:
+    ExampleFilter();
+    virtual ~ExampleFilter();
+    ExampleFilter(const ExampleFilter&) = delete;
+    ExampleFilter& operator=(const ExampleFilter&) = delete;
+private:
+};
 
 
-BaseFilter::~BaseFilter()
-{
-    cerr << __PRETTY_FUNCTION__ << endl;
-}
+#endif /* EXAMPLE_FILTER_HPP */
 

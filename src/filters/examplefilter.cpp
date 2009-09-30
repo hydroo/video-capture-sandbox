@@ -16,19 +16,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#include "basefilter.hpp"
+#include "examplefilter.hpp"
 #include <iostream>
 
 using namespace std;
 
 
-BaseFilter::BaseFilter()
+BaseFilter* create()
+{
+    return static_cast<BaseFilter*>(new ExampleFilter());
+}
+
+
+void destroy(BaseFilter* filter)
+{
+    delete filter;
+}
+
+
+ExampleFilter::ExampleFilter() : BaseFilter()
 {
     cerr << __PRETTY_FUNCTION__ << endl;
 }
 
 
-BaseFilter::~BaseFilter()
+ExampleFilter::~ExampleFilter()
 {
     cerr << __PRETTY_FUNCTION__ << endl;
 }
