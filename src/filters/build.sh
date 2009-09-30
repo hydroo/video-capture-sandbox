@@ -18,6 +18,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 
+BUILD_CXX="g++-4.4 -std=c++0x"
+BUILD_CC="gcc-4.4"
+
+
+
 SCRIPT_DIRECTORY=$(dirname $0)
 SOURCES=$(ls $SCRIPT_DIRECTORY | grep -e "\.cpp$" -e "\.c$")
 
@@ -53,8 +58,8 @@ do
 
             if [ "$SOURCE_WITH_PATH" -nt "$TARGET_WITH_PATH" ]; then
 
-                if [[ "$SOURCE" == *.cpp ]]; then CC="g++"
-                elif [[ "$SOURCE" == *.c ]]; then CC="gcc"
+                if [[ "$SOURCE" == *.cpp ]]; then CC=$BUILD_CXX
+                elif [[ "$SOURCE" == *.c ]]; then CC=$BUILD_CC
                 else exit -1
                 fi
 
