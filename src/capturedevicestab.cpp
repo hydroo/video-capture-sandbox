@@ -45,7 +45,7 @@ template <typename T>
 static string anythingToString(T t);
 
 
-CaptureDevicesTab::CaptureDevicesTab(QWidget *parent, set<CaptureDevice*> captureDevices)
+CaptureDevicesTab::CaptureDevicesTab(QWidget *parent, const set<CaptureDevice*> &captureDevices)
         : QWidget(parent), m_paintThread(0), m_paintThreadCancellationFlag(false)
 {
     /* *** init ui *** */

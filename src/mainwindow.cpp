@@ -27,7 +27,7 @@
 using namespace std;
 
 
-MainWindow::MainWindow(QWidget *parent, set<CaptureDevice*> captureDevices) :
+MainWindow::MainWindow(QWidget *parent, const set<CaptureDevice*> &captureDevices) :
         QMainWindow(parent)
 {
     m_centralWidget = new QTabWidget(this);

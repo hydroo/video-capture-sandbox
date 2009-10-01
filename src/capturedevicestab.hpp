@@ -45,7 +45,7 @@ class CaptureDevicesTab : public QWidget
 {
     Q_OBJECT
 public:
-    CaptureDevicesTab(QWidget *parent, std::set<CaptureDevice*> captureDevices);
+    CaptureDevicesTab(QWidget *parent, const std::set<CaptureDevice*> &captureDevices);
     ~CaptureDevicesTab();
 
 protected:

@@ -33,7 +33,7 @@ class MainWindow : public QMainWindow
 
 public:
 
-    MainWindow(QWidget *parent, std::set<CaptureDevice*> captureDevices);
+    MainWindow(QWidget *parent, const std::set<CaptureDevice*> &captureDevices);
     ~MainWindow();
 
 private:
