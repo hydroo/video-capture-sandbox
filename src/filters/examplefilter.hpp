@@ -24,7 +24,7 @@
 
 
 
-BaseFilter* create();
+extern "C" BaseFilter* create();
 void destroy(BaseFilter*);
 
 
