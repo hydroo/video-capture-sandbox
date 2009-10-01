@@ -60,7 +60,7 @@ int main(int argc, char **args)
 
     list<CaptureDevice*> captureDevices;
 
-    /* evaluate arguments start */
+    /* *** evaluate arguments start *** */
     auto it = argList.begin();
     ++it;
     for (; it != argList.end(); ++it) {
@@ -100,10 +100,10 @@ int main(int argc, char **args)
             cerr << "unknown argument: \"" << *it << endl;
         }
     }
-    /* evaluate arguments end */
+    /* *** evaluate arguments end *** */
 
+    /* *** load filters *** */
     list<BaseFilter*> filters;
-    /* load filters */
 
 
     set<string> filterSearchDirectories;
@@ -160,12 +160,12 @@ int main(int argc, char **args)
 
 
     }
+    /* *** load filters end *** */
 
     for (auto it = filters.begin(); it != filters.end(); ++it) {
         cout << *it << endl;
     }
 
-    /* load filters end */
 
 
 
