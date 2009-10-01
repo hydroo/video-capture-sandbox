@@ -25,7 +25,7 @@ QMAKE_CXXFLAGS = -std=c++0x
 QMAKE_CC = gcc-4.4
 QMAKE_CFLAGS = 
 QMAKE_LINK = g++-4.4
-QMAKE_LFLAGS = -std=c++0x
+QMAKE_LFLAGS = -std=c++0x -Wl,-export-dynamic
 
 CONFIG += warn_on debug
 
