@@ -21,7 +21,7 @@
 
 #include "prereqs.hpp"
 #include <QMainWindow>
-#include <list>
+#include <set>
 
 class QTabWidget;
 class CaptureDevice;
@@ -33,7 +33,7 @@ class MainWindow : public QMainWindow
 
 public:
 
-    MainWindow(QWidget *parent, std::list<CaptureDevice*> captureDevices);
+    MainWindow(QWidget *parent, std::set<CaptureDevice*> captureDevices);
     ~MainWindow();
 
 private:

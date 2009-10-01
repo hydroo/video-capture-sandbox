@@ -58,7 +58,7 @@ int main(int argc, char **args)
         argList.push_back(string(args[i]));
     }
 
-    list<CaptureDevice*> captureDevices;
+    set<CaptureDevice*> captureDevices;
 
     /* *** evaluate arguments start *** */
     auto it = argList.begin();
@@ -86,7 +86,8 @@ int main(int argc, char **args)
             newCaptureDevice->printControls();
             cout << endl;
 
-            captureDevices.push_back(newCaptureDevice);
+            assert(captureDevices.find(newCaptureDevice) == captureDevices.end());
+            captureDevices.insert(newCaptureDevice);
 
         } else if (*it == "-h" || *it == "--help") {
             cout

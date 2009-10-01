@@ -29,6 +29,7 @@
 
 #include <list>
 #include <mutex>
+#include <set>
 
 class QGroupBox;
 class QHBoxLayout;
@@ -44,7 +45,7 @@ class CaptureDevicesTab : public QWidget
 {
     Q_OBJECT
 public:
-    CaptureDevicesTab(QWidget *parent, std::list<CaptureDevice*> captureDevices);
+    CaptureDevicesTab(QWidget *parent, std::set<CaptureDevice*> captureDevices);
     ~CaptureDevicesTab();
 
 protected:
