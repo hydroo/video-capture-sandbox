@@ -102,10 +102,8 @@ int main(int argc, char **args)
     }
     /* *** evaluate arguments end *** */
 
+    set<BaseFilter*> filters;
     /* *** load filters *** */
-    list<BaseFilter*> filters;
-
-
     set<string> filterSearchDirectories;
     filterSearchDirectories.insert(".");
     filterSearchDirectories.insert(executablePath);
@@ -141,12 +139,12 @@ int main(int argc, char **args)
             if (create != 0) {
                 BaseFilter *newFilter = (*create)();
                 if (newFilter != 0) {
-                    filters.push_back(newFilter);
+                    assert(filters.find(newFilter) == filters.end());
+                    filters.insert(newFilter);
                 } else {
                     /* create() returns 0 */
                     cerr << "Cannot create filter instance \"" << fileName << "\" " << endl;
                 }
-                filters.push_back(newFilter);
             } else {
                 /* it is a library, but has not the create() function */
                 cerr << "Cannot load library symbols \"" << fileName << "\" " << dlerror() << endl;
