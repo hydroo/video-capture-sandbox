@@ -128,8 +128,8 @@ int main(int argc, char **args)
 
             void *handle = dlopen(fileName.c_str(), RTLD_NOW);
             if (handle == 0) {
-                cerr << "Cannot open library \"" << fileName << "\" " << dlerror() << endl; 
                 /* it is not a library */
+                //cerr << "Cannot open library \"" << fileName << "\" " << dlerror() << endl; 
                 continue;
             }
 
@@ -146,8 +146,8 @@ int main(int argc, char **args)
                     cerr << "Cannot create filter instance \"" << fileName << "\" " << endl;
                 }
             } else {
-                /* it is a library, but has not the create() function */
-                cerr << "Cannot load library symbols \"" << fileName << "\" " << dlerror() << endl;
+                /* it is a library, but has not the create() function, because it probably is not a filter plugin */
+                cerr << "Cannot load library symbol \"" << fileName << "\" " << dlerror() << endl;
             }
 
 
@@ -155,16 +155,8 @@ int main(int argc, char **args)
             assert(dlcloseRet == 0);
 
         }
-
-
     }
     /* *** load filters end *** */
-
-    for (auto it = filters.begin(); it != filters.end(); ++it) {
-        cout << *it << endl;
-    }
-
-
 
 
     MainWindow mainWindow(0, captureDevices);
