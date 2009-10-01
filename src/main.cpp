@@ -128,7 +128,6 @@ int main(int argc, char **args)
 
             string fileName = *it + '/' + directoryEntry->d_name;
 
-            dlerror();
             void *handle = dlopen(fileName.c_str(), RTLD_NOW);
             if (handle == 0) {
                 cerr << "Cannot open library \"" << fileName << "\" " << dlerror() << endl; 
@@ -137,7 +136,6 @@ int main(int argc, char **args)
             }
 
 
-            dlerror();
             createFilterFunction create = reinterpret_cast<createFilterFunction>(dlsym(handle, "create"));
 
             if (create != 0) {
