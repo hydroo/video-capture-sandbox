@@ -19,12 +19,10 @@
 
 
 BUILD_CXX="g++-4.4 -std=c++0x"
-BUILD_CC="gcc-4.4"
-
 
 
 SCRIPT_DIRECTORY=$(dirname $0)
-SOURCES=$(ls $SCRIPT_DIRECTORY | grep -e "\.cpp$" -e "\.c$")
+SOURCES=$(ls $SCRIPT_DIRECTORY | grep -e "\.cpp$")
 
 #additional include paths
 INCLUDE="-I$SCRIPT_DIRECTORY/../"
@@ -43,7 +41,7 @@ do
 
     for SOURCE in $SOURCES;
     do
-        SOURCE_WITHOUT_EXTENSION=$(echo "$SOURCE" | sed -e 's/\.cpp//g' -e 's/\.c//g')
+        SOURCE_WITHOUT_EXTENSION=$(echo "$SOURCE" | sed -e 's/\.cpp//g')
         SOURCE_WITH_PATH=$SCRIPT_DIRECTORY/$SOURCE
         TARGET_WITH_PATH="$TARGET_DIRECTORY/lib$SOURCE_WITHOUT_EXTENSION.so"
 
@@ -52,17 +50,12 @@ do
         #determine command to be executed
         if [ "$TARGET" == "build" -o "$TARGET" == "all" -o $TARGET == "$SOURCE" ]; then
 
-            if [ "$SOURCE_WITH_PATH" -nt "$TARGET_WITH_PATH" -o \
-                    $TARGET == "$SOURCE" ]; then
+            if [ "$SOURCE_WITH_PATH" -nt "$TARGET_WITH_PATH" -o $TARGET == "$SOURCE" ]; then
 
-                if [[ "$SOURCE" == *.cpp ]]; then CC=$BUILD_CXX
-                elif [[ "$SOURCE" == *.c ]]; then CC=$BUILD_CC
-                else exit -1
-                fi
-
-                COMMAND="$CC -shared -fPIC $INCLUDE $SOURCE_WITH_PATH -o $TARGET_WITH_PATH"
+                COMMAND="$BUILD_CXX -shared -fPIC $INCLUDE $SOURCE_WITH_PATH -o $TARGET_WITH_PATH"
 
             fi
+
         elif [ "$TARGET" == "clean" ]; then
 
             COMMAND="rm -f $TARGET_WITH_PATH"
