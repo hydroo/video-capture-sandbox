@@ -26,8 +26,8 @@
 class BaseFilter;
 
 
-typedef BaseFilter* (*createFilterFunction)();
-typedef void (*destroyFilterFunction)(BaseFilter*);
+typedef BaseFilter* (*CreateFilterFunction)();
+typedef void (*DestroyFilterFunction)(BaseFilter*);
 
 
 

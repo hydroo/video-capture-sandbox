@@ -21,14 +21,20 @@
 
 
 #include "prereqs.hpp"
+
+#include "basefilter.hpp"
+
 #include <QWidget>
+
+#include <set>
+#include <utility>
 
 
 class FilterEditorTab : public QWidget
 {
     Q_OBJECT
 public:
-    FilterEditorTab(QWidget *parent);
+    FilterEditorTab(QWidget *parent, const std::set<std::pair<CreateFilterFunction, DestroyFilterFunction> > &filters);
 };
 
 

@@ -27,13 +27,14 @@
 using namespace std;
 
 
-MainWindow::MainWindow(QWidget *parent, const set<CaptureDevice*> &captureDevices) :
+MainWindow::MainWindow(QWidget *parent, const set<CaptureDevice*> &captureDevices,
+        const set<pair<CreateFilterFunction, DestroyFilterFunction> > &filters) :
         QMainWindow(parent)
 {
     m_centralWidget = new QTabWidget(this);
 
     m_centralWidget->addTab(new CaptureDevicesTab(m_centralWidget, captureDevices), tr("Capture Devices"));
-    m_centralWidget->addTab(new FilterEditorTab(m_centralWidget), tr("Filter Editor"));
+    m_centralWidget->addTab(new FilterEditorTab(m_centralWidget, filters), tr("Filter Editor"));
     m_centralWidget->addTab(new ViewsTab(m_centralWidget), tr("Views"));
 
     setCentralWidget(m_centralWidget);

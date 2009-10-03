@@ -18,8 +18,11 @@
 
 #include "filtereditortab.hpp"
 
+using std::pair;
+using std::set;
 
-FilterEditorTab::FilterEditorTab(QWidget *parent) : QWidget(parent)
+FilterEditorTab::FilterEditorTab(QWidget *parent, const set<pair<CreateFilterFunction, DestroyFilterFunction> > &filters
+        ) : QWidget(parent)
 {
 }
 

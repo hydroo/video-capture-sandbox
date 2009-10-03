@@ -20,12 +20,15 @@
 #define MAIN_WINDOW_HPP
 
 #include "prereqs.hpp"
+
+#include "basefilter.hpp"
+
 #include <QMainWindow>
+
 #include <set>
 
 class QTabWidget;
 class CaptureDevice;
-
 
 class MainWindow : public QMainWindow
 {
@@ -33,7 +36,8 @@ class MainWindow : public QMainWindow
 
 public:
 
-    MainWindow(QWidget *parent, const std::set<CaptureDevice*> &captureDevices);
+    MainWindow(QWidget *parent, const std::set<CaptureDevice*> &captureDevices,
+            const std::set<std::pair<CreateFilterFunction, DestroyFilterFunction> > &filters);
     ~MainWindow();
 
 private:

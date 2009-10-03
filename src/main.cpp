@@ -103,15 +103,14 @@ int main(int argc, char **args)
     }
     /* *** evaluate arguments end *** */
 
-    set<BaseFilter*> filters;
+    set<pair<CreateFilterFunction, DestroyFilterFunction> > filters;
+    set<void*> filterLibraryHandles;
     /* *** load filters *** */
     set<string> filterSearchDirectories;
     filterSearchDirectories.insert(".");
     filterSearchDirectories.insert(executablePath);
 
     for (auto it = filterSearchDirectories.begin(); it != filterSearchDirectories.end(); ++it) {
-
-        cerr << *it << endl;
 
         DIR *directoryHandle = opendir(it->c_str());
 
@@ -134,33 +133,25 @@ int main(int argc, char **args)
                 continue;
             }
 
+            CreateFilterFunction create = reinterpret_cast<CreateFilterFunction>(dlsym(handle, "create"));
+            DestroyFilterFunction destroy = reinterpret_cast<DestroyFilterFunction>(dlsym(handle, "destroy"));
 
-            createFilterFunction create = reinterpret_cast<createFilterFunction>(dlsym(handle, "create"));
+            if (create != 0 && destroy != 0) {
 
-            if (create != 0) {
-                BaseFilter *newFilter = (*create)();
-                if (newFilter != 0) {
-                    assert(filters.find(newFilter) == filters.end());
-                    filters.insert(newFilter);
-                } else {
-                    /* create() returns 0 */
-                    cerr << "Cannot create filter instance \"" << fileName << "\" " << endl;
-                }
+                filterLibraryHandles.insert(handle);
+                filters.insert(make_pair(create, destroy));
+
             } else {
                 /* it is a library, but has not the create() function, because it probably is not a filter plugin */
-                cerr << "Cannot load library symbol \"" << fileName << "\" " << dlerror() << endl;
+                cerr << "Cannot load filter library symbols \"" << fileName << "\" " << dlerror() << endl;
             }
-
-
-            int dlcloseRet = dlclose(handle);
-            assert(dlcloseRet == 0);
 
         }
     }
     /* *** load filters end *** */
 
 
-    MainWindow mainWindow(0, captureDevices);
+    MainWindow mainWindow(0, captureDevices, filters);
     mainWindow.show();
 
     int ret = app.exec();
@@ -168,6 +159,11 @@ int main(int argc, char **args)
 
     for (auto it = captureDevices.begin(); it != captureDevices.end(); ++it) {
         (*it)->finish();
+    }
+
+    for (auto it = filterLibraryHandles.begin(); it != filterLibraryHandles.end(); ++it) {
+        int dlcloseRet = dlclose(*it);
+        assert(dlcloseRet == 0);
     }
 
     return ret;

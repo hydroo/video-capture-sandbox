@@ -25,7 +25,7 @@
 
 
 extern "C" BaseFilter* create();
-void destroy(BaseFilter*);
+extern "C" void destroy(BaseFilter*);
 
 
 class ExampleFilter : public BaseFilter
